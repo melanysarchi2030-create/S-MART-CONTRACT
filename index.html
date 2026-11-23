@@ -1,0 +1,2744 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AVYRA DIGITAL TWIN — BEYOND EVERY JOURNEY</title>
+
+  <!-- Tipografía Inter desde Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS vía CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+          },
+          colors: {
+            avyra: {
+              blue: '#0B1D3A',
+              blueLight: '#132C52',
+              burgundy: '#6E1E2E',
+              burgundyLight: '#8C283C',
+              beige: '#F4EFE8',
+              beigeDark: '#E8DFD1',
+              slateBg: '#F8FAFC',
+            }
+          },
+          boxShadow: {
+            soft: '0 10px 25px -5px rgba(11, 29, 58, 0.06), 0 8px 10px -6px rgba(11, 29, 58, 0.04)',
+            card: '0 4px 18px -2px rgba(15, 23, 42, 0.06)',
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- Three.js y Chart.js vía CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <style>
+    /* Estilos base complementarios y animaciones suaves */
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background-color: #F8FAFC;
+      color: #1E293B;
+      overflow-x: hidden;
+    }
+
+    .glass-header {
+      background: linear-gradient(120deg, #0B1D3A 0%, #132C52 62%, #6E1E2E 140%);
+    }
+
+    .fade-in {
+      animation: fadeIn 0.28s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Scrollbar estilizada sutil */
+    ::-webkit-scrollbar {
+      width: 7px;
+      height: 7px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #F1F5F9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #CBD5E1;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94A3B8;
+    }
+
+    /* Contenedor del canvas 3D */
+    #twin-canvas-container canvas {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+      cursor: grab;
+      touch-action: none;
+    }
+    #twin-canvas-container canvas:active {
+      cursor: grabbing;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-avyra-slateBg text-slate-800">
+
+  <!-- Banner superior de aviso de demostración / sin GPS en tiempo real -->
+  <div class="bg-avyra-beige border-b border-avyra-beigeDark text-slate-700 text-xs py-2 px-4">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+      <div class="flex items-center gap-2">
+        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-avyra-burgundy text-white">
+          DEMO / SIMULACIÓN
+        </span>
+        <span>
+          <strong>Datos de demostración / Demo:</strong> Los inventarios, movimientos, registros logísticos y sincronizaciones ERP/CRM/Tienda son simulados localmente. No hay conexión GPS en tiempo real ni sensores físicos activos.
+        </span>
+      </div>
+      <div class="flex items-center gap-3">
+        <span id="db-sync-indicator" class="text-[11px] font-medium text-avyra-blue">
+          Base local activa (localStorage)
+        </span>
+        <button
+          id="btn-reset-demo"
+          type="button"
+          class="px-2.5 py-1 rounded-lg bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 font-medium transition text-[11px]"
+        >
+          Restablecer datos demo
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Encabezado principal de AVYRA DIGITAL TWIN -->
+  <header class="glass-header text-white sticky top-0 z-30 shadow-lg">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between py-4 gap-3">
+        <!-- Marca y Lema -->
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3.5">
+            <!-- Emblema SVG de AVYRA -->
+            <div class="w-11 h-11 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center shadow-inner shrink-0">
+              <svg class="w-6 h-6 text-white" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+                <polygon points="16,3 28,10 28,22 16,29 4,22 4,10" stroke="currentColor" stroke-width="2.2" fill="rgba(255,255,255,0.08)" />
+                <path d="M10 20L16 9L22 20H18.5L16 15L13.5 20H10Z" fill="#F4EFE8" />
+                <circle cx="16" cy="23.5" r="1.6" fill="#F4EFE8" />
+              </svg>
+            </div>
+            <div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <h1 class="text-lg sm:text-xl font-extrabold tracking-tight text-white">
+                  AVYRA DIGITAL TWIN
+                </h1>
+                <span class="text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-full bg-white/15 border border-white/25 text-avyra-beige font-semibold">
+                  v2.4 Twin Core
+                </span>
+              </div>
+              <p class="text-xs tracking-[0.2em] uppercase text-avyra-beige/90 font-medium mt-0.5">
+                BEYOND EVERY JOURNEY
+              </p>
+            </div>
+          </div>
+
+          <!-- Contador rápido de alertas en móvil -->
+          <button
+            id="mobile-alert-jump"
+            type="button"
+            class="md:hidden inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-avyra-burgundyLight text-white text-xs font-semibold shadow"
+          >
+            <span>Alertas</span>
+            <span id="mobile-alert-count" class="px-1.5 py-0.2 rounded-full bg-white text-avyra-burgundy font-bold">0</span>
+          </button>
+        </div>
+
+        <!-- Barra de búsqueda rápida de producto / orden -->
+        <div class="flex items-center gap-2 w-full md:w-auto">
+          <div class="relative flex-1 md:w-64">
+            <input
+              id="global-search-input"
+              type="text"
+              placeholder="Buscar AVY-001, mochila, ORD-8841..."
+              class="w-full rounded-xl bg-white/12 border border-white/20 placeholder-slate-300 text-white text-xs sm:text-sm px-3.5 py-2 focus:outline-none focus:bg-white focus:text-slate-900 focus:placeholder-slate-400 transition"
+            />
+          </div>
+          <button
+            id="global-search-clear"
+            type="button"
+            title="Limpiar búsqueda"
+            class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-xs font-medium transition"
+          >
+            Limpiar
+          </button>
+        </div>
+      </div>
+
+      <!-- Navegación principal por pestañas -->
+      <nav aria-label="Navegación principal" class="flex items-center gap-1.5 overflow-x-auto pb-3 pt-1">
+        <button data-tab="dashboard" class="nav-tab active-tab px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition flex items-center gap-2">
+          <span>Panel Principal</span>
+        </button>
+        <button data-tab="catalog" class="nav-tab px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition flex items-center gap-2">
+          <span>Gemelos Digitales (6+)</span>
+        </button>
+        <button data-tab="viewer3d" class="nav-tab px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition flex items-center gap-2">
+          <span>Visualización 3D</span>
+        </button>
+        <button data-tab="traceability" class="nav-tab px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition flex items-center gap-2">
+          <span>Seguimiento y Trazabilidad</span>
+        </button>
+        <button data-tab="integrations" class="nav-tab px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition flex items-center gap-2">
+          <span>ERP · CRM · Tienda</span>
+        </button>
+        <button data-tab="analytics" class="nav-tab px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition flex items-center gap-2">
+          <span>Análisis y Alertas</span>
+          <span id="nav-alert-badge" class="px-1.5 py-0.2 text-[11px] rounded-full bg-avyra-burgundyLight text-white font-bold">0</span>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Toast / Notificación flotante no bloqueante (sin alert/confirm) -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm pointer-events-none"></div>
+
+  <!-- Contenido Principal -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8">
+
+    <!-- ===================================================================== -->
+    <!-- SECCIÓN 1: PANEL PRINCIPAL (DASHBOARD)                                -->
+    <!-- ===================================================================== -->
+    <section id="section-dashboard" class="app-section fade-in space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+        <div>
+          <span class="text-xs font-bold uppercase tracking-wider text-avyra-burgundy">Centro de Control Operativo</span>
+          <h2 class="text-2xl sm:text-3xl font-extrabold text-avyra-blue tracking-tight">Panel Principal — AVYRA Digital Twin</h2>
+          <p class="text-sm text-slate-600 mt-1">
+            Sincronización física-digital de artículos de viaje AVYRA con trazabilidad comercial y supervisión de inventario.
+          </p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button
+            id="dash-go-3d"
+            type="button"
+            class="px-4 py-2.5 rounded-xl bg-avyra-blue hover:bg-avyra-blueLight text-white text-xs sm:text-sm font-semibold shadow-soft transition"
+          >
+            Abrir Visor 3D Interactivo
+          </button>
+          <button
+            id="dash-go-erp"
+            type="button"
+            class="px-4 py-2.5 rounded-xl bg-avyra-burgundy hover:bg-avyra-burgundyLight text-white text-xs sm:text-sm font-semibold shadow-soft transition"
+          >
+            Sincronizar ERP
+          </button>
+        </div>
+      </div>
+
+      <!-- KPIs Principales -->
+      <div id="kpi-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        <!-- Generado dinámicamente por JS -->
+      </div>
+
+      <!-- Fila intermedia: Gráficos de actividad y demanda + Panel de Alertas -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Gráficos (7 columnas) -->
+        <div class="lg:col-span-7 space-y-6">
+          <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-card">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+              <div>
+                <h3 class="text-base font-bold text-avyra-blue">Actividad y Movimientos de Inventario</h3>
+                <p class="text-xs text-slate-500">Entradas, salidas/ventas y despachos registrados (Datos de demostración / Demo)</p>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-avyra-beige text-avyra-blue">
+                7 periodos demo
+              </span>
+            </div>
+            <div class="h-64 relative">
+              <canvas id="chart-movements"></canvas>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-card">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+              <div>
+                <h3 class="text-base font-bold text-avyra-blue">Disponibilidad y Ventas por Gemelo Digital</h3>
+                <p class="text-xs text-slate-500">Comparativa de unidades disponibles vs. unidades vendidas por SKU</p>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-700">
+                Catálogo AVYRA
+              </span>
+            </div>
+            <div class="h-60 relative">
+              <canvas id="chart-stock-sales"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Alertas y Notificaciones + Estado General (5 columnas) -->
+        <div class="lg:col-span-5 flex flex-col gap-6">
+          <!-- Estado de los productos -->
+          <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-card">
+            <h3 class="text-base font-bold text-avyra-blue mb-3">Estado Operativo de Productos</h3>
+            <div id="dash-product-status-list" class="space-y-2.5">
+              <!-- Generado dinámicamente -->
+            </div>
+          </div>
+
+          <!-- Alertas y Notificaciones -->
+          <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-card flex-1 flex flex-col">
+            <div class="flex items-center justify-between gap-2 mb-3">
+              <div>
+                <h3 class="text-base font-bold text-avyra-blue">Alertas y Notificaciones</h3>
+                <p class="text-xs text-slate-500">Stock bajo, pendientes de despacho y diferencias de inventario</p>
+              </div>
+              <button
+                id="dash-ack-all-alerts"
+                type="button"
+                class="text-xs font-semibold text-avyra-burgundy hover:underline"
+              >
+                Marcar leídas
+              </button>
+            </div>
+            <div id="dash-alerts-list" class="space-y-2.5 max-h-96 overflow-y-auto pr-1">
+              <!-- Generado dinámicamente -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- SECCIÓN 2: GEMELOS DIGITALES DE LOS PRODUCTOS                         -->
+    <!-- ===================================================================== -->
+    <section id="section-catalog" class="app-section hidden fade-in space-y-6">
+      <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <span class="text-xs font-bold uppercase tracking-wider text-avyra-burgundy">Catálogo Físico-Digital</span>
+          <h2 class="text-2xl sm:text-3xl font-extrabold text-avyra-blue tracking-tight">Gemelos Digitales de Productos AVYRA</h2>
+          <p class="text-sm text-slate-600 mt-1">
+            Cada producto cuenta con modelo 3D dedicado, identificador digital único, referencia visual de producto, variantes y trazabilidad.
+          </p>
+        </div>
+
+        <!-- Filtros de categoría y estado -->
+        <div class="flex flex-wrap items-center gap-2">
+          <select id="catalog-filter-status" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs sm:text-sm font-medium text-slate-700 focus:outline-none focus:border-avyra-blue">
+            <option value="ALL">Todos los estados</option>
+            <option value="Disponible">Disponible</option>
+            <option value="Stock Bajo">Stock Bajo</option>
+            <option value="En Tránsito">En Tránsito</option>
+            <option value="Preparación">Preparación</option>
+          </select>
+          <button
+            id="btn-open-new-twin-modal"
+            type="button"
+            class="px-4 py-2 rounded-xl bg-avyra-burgundy hover:bg-avyra-burgundyLight text-white text-xs sm:text-sm font-semibold shadow-soft transition"
+          >
+            + Registrar Gemelo
+          </button>
+        </div>
+      </div>
+
+      <!-- Formulario colapsable para registrar un nuevo gemelo digital en la base local -->
+      <div id="new-twin-panel" class="hidden bg-avyra-beige/70 border border-avyra-beigeDark rounded-2xl p-5 shadow-card">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-base font-bold text-avyra-blue">Registrar Nuevo Gemelo Digital (Base de Demostración)</h3>
+          <button id="btn-close-new-twin-modal" type="button" class="text-xs font-semibold text-slate-600 hover:text-slate-900">Cerrar</button>
+        </div>
+        <form id="form-new-twin" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          <input name="code" required placeholder="Código (ej. AVY-007)" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm" />
+          <input name="name" required placeholder="Nombre del producto" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm" />
+          <select name="archetype" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm">
+            <option value="suitcase">Forma 3D: Maleta</option>
+            <option value="backpack">Forma 3D: Mochila</option>
+            <option value="pillow">Forma 3D: Almohada</option>
+            <option value="pouch">Forma 3D: Organizador</option>
+            <option value="adapter">Forma 3D: Adaptador</option>
+            <option value="scale">Forma 3D: Báscula</option>
+          </select>
+          <input name="stock" type="number" min="0" value="25" required placeholder="Stock inicial" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm" />
+          <button type="submit" class="rounded-xl bg-avyra-blue hover:bg-avyra-blueLight text-white font-semibold text-sm px-4 py-2 transition">
+            Guardar Gemelo
+          </button>
+        </form>
+      </div>
+
+      <!-- Grid de tarjetas de los 6+ productos -->
+      <div id="catalog-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        <!-- Generado dinámicamente -->
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- SECCIÓN 3: VISUALIZACIÓN INTERACTIVA 3D                               -->
+    <!-- ===================================================================== -->
+    <section id="section-viewer3d" class="app-section hidden fade-in space-y-6">
+      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div>
+          <span class="text-xs font-bold uppercase tracking-wider text-avyra-burgundy">Inspección Espacial Three.js / WebGL</span>
+          <h2 class="text-2xl sm:text-3xl font-extrabold text-avyra-blue tracking-tight">Visualización Interactiva del Gemelo Digital</h2>
+          <p class="text-sm text-slate-600 mt-1">
+            Arrastra para rotar, usa la rueda o controles para acercar/alejar, cambia variantes de color y consulta datos del gemelo.
+          </p>
+        </div>
+
+        <!-- Selector de producto activo -->
+        <div class="flex flex-wrap items-center gap-2">
+          <label for="viewer-product-select" class="text-xs font-bold uppercase text-slate-600">Producto:</label>
+          <select id="viewer-product-select" class="rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm font-semibold text-avyra-blue shadow-sm focus:outline-none focus:border-avyra-blue">
+            <!-- Opciones generadas dinámicamente -->
+          </select>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Escena 3D (7 columnas) -->
+        <div class="lg:col-span-7 bg-white rounded-2xl border border-slate-200/80 shadow-card overflow-hidden flex flex-col">
+          <div class="px-5 py-3.5 border-b border-slate-100 flex flex-wrap items-center justify-between gap-2 bg-slate-50/70">
+            <div>
+              <span id="viewer-3d-badge" class="text-xs font-bold text-avyra-burgundy uppercase">AVY-001</span>
+              <h3 id="viewer-3d-title" class="text-base font-bold text-avyra-blue">Maleta Inteligente AVYRA Pro</h3>
+            </div>
+            <span class="text-[11px] px-2.5 py-1 rounded-full bg-avyra-beige text-slate-700 font-medium">
+              Modelo 3D procedimental · Referencia visual
+            </span>
+          </div>
+
+          <!-- Contenedor del Canvas Three.js -->
+          <div class="relative w-full h-80 sm:h-[420px] bg-gradient-to-b from-slate-100 via-avyra-beige/40 to-slate-200">
+            <div id="twin-canvas-container" class="w-full h-full"></div>
+
+            <!-- Fallback si WebGL no está disponible -->
+            <div id="webgl-fallback" class="hidden absolute inset-0 flex items-center justify-center p-6 text-center bg-slate-100">
+              <div class="max-w-sm">
+                <p class="font-bold text-avyra-blue">WebGL no disponible en este entorno</p>
+                <p class="text-xs text-slate-600 mt-1">Se muestra la ficha de referencia visual y datos técnicos del gemelo digital.</p>
+              </div>
+            </div>
+
+            <!-- Etiqueta flotante de cámara -->
+            <div class="absolute bottom-3 left-3 bg-white/90 backdrop-blur px-3 py-1.5 rounded-xl border border-slate-200 text-[11px] text-slate-600 font-medium pointer-events-none">
+              Arrastra para orbitar · Scroll para zoom
+            </div>
+          </div>
+
+          <!-- Controles interactivos de cámara y variante -->
+          <div class="p-4 border-t border-slate-100 bg-white space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div class="flex flex-wrap items-center gap-2">
+                <button id="btn-zoom-in" type="button" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold transition">
+                  Acercar (+)
+                </button>
+                <button id="btn-zoom-out" type="button" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold transition">
+                  Alejar (-)
+                </button>
+                <button id="btn-toggle-autorotate" type="button" class="px-3 py-1.5 rounded-xl bg-avyra-blue text-white text-xs font-semibold transition">
+                  Auto-rotación: ON
+                </button>
+                <button id="btn-reset-camera" type="button" class="px-3 py-1.5 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold transition">
+                  Reiniciar vista
+                </button>
+              </div>
+            </div>
+
+            <!-- Selector de Color y Variante -->
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Color y Variante Seleccionada</span>
+                <span id="viewer-variant-sku" class="text-xs font-mono font-semibold text-avyra-blue">SKU-AVY001-NVY</span>
+              </div>
+              <div id="viewer-variant-buttons" class="flex flex-wrap gap-2">
+                <!-- Generado dinámicamente -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel Inspector de Características, Inventario y Movimientos (5 columnas) -->
+        <div class="lg:col-span-5 bg-white rounded-2xl border border-slate-200/80 shadow-card p-5 flex flex-col justify-between space-y-5">
+          <div id="viewer-inspector-content" class="space-y-4">
+            <!-- Generado dinámicamente -->
+          </div>
+
+          <div class="pt-4 border-t border-slate-100 flex flex-wrap gap-2">
+            <button
+              id="viewer-btn-trace"
+              type="button"
+              class="flex-1 px-3.5 py-2.5 rounded-xl bg-avyra-blue hover:bg-avyra-blueLight text-white text-xs font-semibold transition text-center"
+            >
+              Ver Trazabilidad
+            </button>
+            <button
+              id="viewer-btn-erp"
+              type="button"
+              class="flex-1 px-3.5 py-2.5 rounded-xl bg-avyra-burgundy hover:bg-avyra-burgundyLight text-white text-xs font-semibold transition text-center"
+            >
+              Gestionar en ERP
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- SECCIÓN 4: SEGUIMIENTO Y TRAZABILIDAD                                 -->
+    <!-- ===================================================================== -->
+    <section id="section-traceability" class="app-section hidden fade-in space-y-6">
+      <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <span class="text-xs font-bold uppercase tracking-wider text-avyra-burgundy">Recorrido Comercial y Logístico</span>
+          <h2 class="text-2xl sm:text-3xl font-extrabold text-avyra-blue tracking-tight">Seguimiento y Trazabilidad de Pedidos</h2>
+          <p class="text-sm text-slate-600 mt-1">
+            Etapas: Producto registrado → Inventario disponible → Pedido realizado → Preparación → Despacho → Entrega. (Registros logísticos demo; sin rastreo GPS en vivo).
+          </p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <select id="trace-order-select" class="rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs sm:text-sm font-semibold text-avyra-blue">
+            <!-- Generado dinámicamente -->
+          </select>
+          <button
+            id="btn-advance-stage"
+            type="button"
+            class="px-4 py-2 rounded-xl bg-avyra-burgundy hover:bg-avyra-burgundyLight text-white text-xs sm:text-sm font-semibold shadow-soft transition"
+          >
+            Avanzar Siguiente Etapa
+          </button>
+        </div>
+      </div>
+
+      <!-- Stepper visual de las 6 etapas obligatorias -->
+      <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-card">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <h3 class="text-base font-bold text-avyra-blue">Línea de Etapas del Pedido Seleccionado</h3>
+          <span id="trace-current-order-badge" class="text-xs font-mono px-3 py-1 rounded-full bg-avyra-beige text-avyra-blue font-bold">
+            ORD-8841
+          </span>
+        </div>
+        <div id="trace-stepper" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+          <!-- Generado dinámicamente -->
+        </div>
+      </div>
+
+      <!-- Detalle del pedido e historial cronológico de actualizaciones -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div id="trace-order-summary" class="lg:col-span-5 bg-white rounded-2xl border border-slate-200/80 p-5 shadow-card space-y-3">
+          <!-- Generado dinámicamente -->
+        </div>
+
+        <div class="lg:col-span-7 bg-white rounded-2xl border border-slate-200/80 p-5 shadow-card">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="text-base font-bold text-avyra-blue">Historial de Actualizaciones y Movimientos</h3>
+              <p class="text-xs text-slate-500">Cada cambio actualiza el historial del gemelo digital asociado</p>
+            </div>
+            <span class="text-[11px] px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 font-medium">
+              Registro logístico demo
+            </span>
+          </div>
+          <div id="trace-history-list" class="space-y-3">
+            <!-- Generado dinámicamente -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- SECCIÓN 5: CONEXIÓN CON ERP, CRM Y TIENDA VIRTUAL                     -->
+    <!-- ===================================================================== -->
+    <section id="section-integrations" class="app-section hidden fade-in space-y-6">
+      <div>
+        <span class="text-xs font-bold uppercase tracking-wider text-avyra-burgundy">Ecosistema Conectado AVYRA</span>
+        <h2 class="text-2xl sm:text-3xl font-extrabold text-avyra-blue tracking-tight">Integración con ERP, CRM y Tienda Virtual</h2>
+        <p class="text-sm text-slate-600 mt-1">
+          Simulación interactiva de sincronización de inventario, disponibilidad comercial, enlaces internos CRM sin datos personales y payload API/BD.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Simulador ERP (6 columnas) -->
+        <div class="lg:col-span-6 bg-white rounded-2xl border border-slate-200/80 p-5 shadow-card space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div>
+              <span class="text-[11px] font-bold uppercase tracking-wider text-avyra-blue">Módulo ERP</span>
+              <h3 class="text-lg font-bold text-slate-900">Existencias, Entradas/Salidas y Ventas</h3>
+            </div>
+            <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              Conector Simulado Activo
+            </span>
+          </div>
+
+          <form id="form-erp-movement" class="space-y-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Producto / Gemelo Digital</label>
+                <select id="erp-product-select" name="productId" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium">
+                  <!-- Generado dinámicamente -->
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Tipo de Operación ERP</label>
+                <select id="erp-op-select" name="operation" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium">
+                  <option value="entrada">Entrada de Inventario (+)</option>
+                  <option value="venta">Venta Registrada (- Stock / + Vendidos)</option>
+                  <option value="transito">Enviar a Tránsito / Despacho</option>
+                  <option value="ajuste_reporte">Reportar Conteo Físico / Auditoría</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Cantidad de Unidades</label>
+                <input id="erp-qty-input" name="quantity" type="number" min="1" max="500" value="5" required class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Referencia / Ubicación</label>
+                <input id="erp-ref-input" name="reference" type="text" value="ERP-MOV-904 · Bodega Central" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm" />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              class="w-full py-2.5 px-4 rounded-xl bg-avyra-blue hover:bg-avyra-blueLight text-white text-sm font-semibold shadow-soft transition"
+            >
+              Ejecutar Movimiento en ERP y Actualizar Gemelo
+            </button>
+          </form>
+
+          <!-- Tabla rápida de existencias ERP -->
+          <div class="pt-2">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Consulta Rápida de Existencias ERP</h4>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr class="border-b border-slate-200 text-slate-500">
+                    <th class="py-2 pr-2">SKU</th>
+                    <th class="py-2 px-2">Stock ERP</th>
+                    <th class="py-2 px-2">Vendidos</th>
+                    <th class="py-2 pl-2">Estado</th>
+                  </tr>
+                </thead>
+                <tbody id="erp-stock-table-body" class="divide-y divide-slate-100">
+                  <!-- Generado dinámicamente -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tienda Virtual + CRM Privacidad (6 columnas) -->
+        <div class="lg:col-span-6 space-y-6">
+          <!-- Tienda Virtual -->
+          <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-card space-y-3">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <span class="text-[11px] font-bold uppercase tracking-wider text-avyra-burgundy">Tienda Virtual AVYRA</span>
+                <h3 class="text-lg font-bold text-slate-900">Disponibilidad y Vínculo con Gemelo</h3>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-avyra-beige text-avyra-blue">
+                BEYOND EVERY JOURNEY
+              </span>
+            </div>
+            <div id="storefront-sync-list" class="space-y-2.5 max-h-60 overflow-y-auto pr-1">
+              <!-- Generado dinámicamente -->
+            </div>
+          </div>
+
+          <!-- CRM (Identificadores internos sin datos personales públicos) -->
+          <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-card space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+              <div>
+                <span class="text-[11px] font-bold uppercase tracking-wider text-avyra-blue">Módulo CRM Comercial</span>
+                <h3 class="text-lg font-bold text-slate-900">Pedidos e Identificadores Internos</h3>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                Sin datos personales públicos (PII oculta)
+              </span>
+            </div>
+            <div id="crm-orders-list" class="space-y-2.5">
+              <!-- Generado dinámicamente -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Inspector API / Base de Datos JSON -->
+      <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-card space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <span class="text-[11px] font-bold uppercase tracking-wider text-avyra-burgundy">Arquitectura API & Base de Datos</span>
+            <h3 class="text-base font-bold text-avyra-blue">Payload JSON del Gemelo Digital Seleccionado</h3>
+          </div>
+          <button
+            id="btn-copy-json"
+            type="button"
+            class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold transition"
+          >
+            Copiar JSON
+          </button>
+        </div>
+        <pre id="api-json-preview" class="bg-avyra-blue text-slate-100 rounded-xl p-4 text-xs overflow-x-auto max-h-72 leading-relaxed"></pre>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- SECCIÓN 6: ANÁLISIS Y ALERTAS                                        -->
+    <!-- ===================================================================== -->
+    <section id="section-analytics" class="app-section hidden fade-in space-y-6">
+      <div>
+        <span class="text-xs font-bold uppercase tracking-wider text-avyra-burgundy">Inteligencia Operativa y Reconciliación</span>
+        <h2 class="text-2xl sm:text-3xl font-extrabold text-avyra-blue tracking-tight">Análisis, Indicadores y Alertas</h2>
+        <p class="text-sm text-slate-600 mt-1">
+          Detección de bajo inventario, productos con mayor movimiento, variantes demandadas, pendientes de despacho y diferencias entre inventario registrado y reportado.
+        </p>
+      </div>
+
+      <!-- Tarjetas analíticas clave -->
+      <div id="analytics-highlights" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Generado dinámicamente -->
+      </div>
+
+      <!-- Reconciliación de inventario vs movimientos reportados -->
+      <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-card space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 class="text-base font-bold text-avyra-blue">Reconciliación: Inventario Registrado vs. Movimientos Reportados</h3>
+            <p class="text-xs text-slate-500">Permite auditar discrepancias entre el stock registrado en el sistema y los reportes operativos</p>
+          </div>
+          <button
+            id="btn-reconcile-all"
+            type="button"
+            class="px-3.5 py-2 rounded-xl bg-avyra-blue hover:bg-avyra-blueLight text-white text-xs font-semibold transition"
+          >
+            Conciliar Diferencias
+          </button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs sm:text-sm">
+            <thead>
+              <tr class="border-b border-slate-200 text-slate-500 bg-slate-50/70">
+                <th class="py-2.5 px-3">Producto</th>
+                <th class="py-2.5 px-3">Stock Registrado</th>
+                <th class="py-2.5 px-3">Stock Reportado</th>
+                <th class="py-2.5 px-3">Diferencia</th>
+                <th class="py-2.5 px-3">Variante Líder (Demo)</th>
+                <th class="py-2.5 px-3">Estado</th>
+              </tr>
+            </thead>
+            <tbody id="reconciliation-table-body" class="divide-y divide-slate-100">
+              <!-- Generado dinámicamente -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Centro completo de alertas filtrable -->
+      <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-card space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h3 class="text-base font-bold text-avyra-blue">Registro Detallado de Alertas</h3>
+          <div class="flex flex-wrap gap-1.5">
+            <button data-alert-filter="ALL" class="alert-filter-btn px-3 py-1.5 rounded-xl bg-avyra-blue text-white text-xs font-semibold">Todas</button>
+            <button data-alert-filter="stock" class="alert-filter-btn px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-semibold">Bajo Stock</button>
+            <button data-alert-filter="discrepancy" class="alert-filter-btn px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-semibold">Diferencias</button>
+            <button data-alert-filter="dispatch" class="alert-filter-btn px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-semibold">Despacho / Estado</button>
+          </div>
+        </div>
+        <div id="analytics-alerts-container" class="space-y-2.5">
+          <!-- Generado dinámicamente -->
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Pie de página -->
+  <footer class="bg-avyra-blue text-slate-300 py-6 mt-10 border-t border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+      <div>
+        <span class="font-bold text-white">AVYRA DIGITAL TWIN</span> · BEYOND EVERY JOURNEY
+      </div>
+      <div class="text-slate-400 text-center sm:text-right">
+        Plataforma de gemelos digitales para artículos de viaje · Datos de demostración / Demo · Sin rastreo GPS en tiempo real.
+      </div>
+    </div>
+  </footer>
+
+  <!-- ===================================================================== -->
+  <!-- LÓGICA DE APLICACIÓN, MODELOS 3D THREE.JS, GRÁFICOS Y ESTADO LOCAL     -->
+  <!-- ===================================================================== -->
+  <script>
+    /**
+     * AVYRA DIGITAL TWIN — Aplicación completa en un solo archivo
+     * Incluye:
+     * 1. Estado persistente en localStorage con restablecimiento seguro.
+     * 2. Seis productos iniciales de AVYRA con modelos 3D procedimentales fieles en Three.js.
+     * 3. Ilustraciones vectoriales de referencia de producto real (claramente marcadas como referencia visual/demo).
+     * 4. Trazabilidad de 6 etapas obligatorias (sin GPS en tiempo real).
+     * 5. Simulador ERP, Tienda Virtual, CRM (sin exponer PII) y Reconciliación/Alertas.
+     */
+
+    const STORAGE_KEY = 'AVYRA_DIGITAL_TWIN_STATE_V1';
+
+    const TRACE_STAGES = [
+      'Producto registrado',
+      'Inventario disponible',
+      'Pedido realizado',
+      'Preparación',
+      'Despacho',
+      'Entrega'
+    ];
+
+    // Datos iniciales de demostración para los 6 productos AVYRA
+    function createInitialDemoState() {
+      return {
+        selectedProductId: 'prod-1',
+        selectedVariantByProduct: {
+          'prod-1': 'var-1a',
+          'prod-2': 'var-2a',
+          'prod-3': 'var-3a',
+          'prod-4': 'var-4a',
+          'prod-5': 'var-5a',
+          'prod-6': 'var-6a'
+        },
+        selectedOrderId: 'ORD-8841',
+        searchQuery: '',
+        alertFilter: 'ALL',
+        activitySeries: {
+          labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
+          entradas: [18, 12, 24, 10, 28, 14, 8],
+          salidas: [11, 16, 15, 19, 22, 17, 9],
+          despachos: [8, 14, 13, 15, 20, 12, 6]
+        },
+        products: [
+          {
+            id: 'prod-1',
+            code: 'AVY-001',
+            twinId: 'DT-AVYRA-001-9A4F',
+            name: 'Maleta Inteligente AVYRA Pro',
+            category: 'Equipaje Rígido',
+            archetype: 'suitcase',
+            description: 'Maleta de cabina con carcasa rígida de policarbonato texturizado, 4 ruedas giratorias silenciosas de 360°, asa telescópica de aluminio y compartimento frontal de acceso rápido.',
+            features: [
+              'Carcasa de policarbonato aeroespacial anti-rayones',
+              '4 ruedas dobles silenciosas con giro 360°',
+              'Mango telescópico ergonómico de 3 niveles',
+              'Cerradura TSA integrada y bolsillo para portátil de 15.6"'
+            ],
+            status: 'Disponible',
+            stock: 34,
+            reportedStock: 34,
+            sold: 68,
+            inTransit: 12,
+            minStockAlert: 10,
+            priceUsd: 219,
+            storefrontAvailable: true,
+            topVariantName: 'Azul Profundo Matte',
+            variants: [
+              { id: 'var-1a', name: 'Azul Profundo Matte', sku: 'SKU-AVY001-NVY', hex: '#132C52', stock: 18 },
+              { id: 'var-1b', name: 'Borgoña Ejecutivo', sku: 'SKU-AVY001-BRG', hex: '#6E1E2E', stock: 10 },
+              { id: 'var-1c', name: 'Arena Beige', sku: 'SKU-AVY001-BGE', hex: '#D8CBB8', stock: 6 }
+            ],
+            movements: [
+              { date: '2026-11-20 09:15', type: 'Entrada ERP', delta: '+20', location: 'Centro Logístico Quito (Demo)', ref: 'ERP-IN-402' },
+              { date: '2026-11-21 14:40', type: 'Pedido / Venta', delta: '-6', location: 'Tienda Virtual AVYRA', ref: 'ORD-8841' },
+              { date: '2026-11-22 11:05', type: 'Despacho', delta: '-4', location: 'Hub Comercial Norte (Demo)', ref: 'ORD-8845' }
+            ]
+          },
+          {
+            id: 'prod-2',
+            code: 'AVY-002',
+            twinId: 'DT-AVYRA-002-3C8B',
+            name: 'Mochila Travel Elite',
+            category: 'Mochilas',
+            archetype: 'backpack',
+            description: 'Mochila estructurada para viajes frecuentes con bolsillo frontal organizador, panel trasero acolchado transpirable, correa para maleta y compartimento acolchado para laptop de 16".',
+            features: [
+              'Tejido balístico repelente al agua',
+              'Compartimento independiente para laptop y tablet',
+              'Banda trasera de sujeción a asa de maleta',
+              'Bolsillos ocultos de seguridad y asa superior reforzada'
+            ],
+            status: 'Stock Bajo',
+            stock: 7,
+            reportedStock: 5,
+            sold: 94,
+            inTransit: 8,
+            minStockAlert: 10,
+            priceUsd: 139,
+            storefrontAvailable: true,
+            topVariantName: 'Borgoña Profundo',
+            variants: [
+              { id: 'var-2a', name: 'Borgoña Profundo', sku: 'SKU-AVY002-BRG', hex: '#6E1E2E', stock: 3 },
+              { id: 'var-2b', name: 'Azul Marino', sku: 'SKU-AVY002-NVY', hex: '#0B1D3A', stock: 2 },
+              { id: 'var-2c', name: 'Gris Pizarra', sku: 'SKU-AVY002-SLT', hex: '#475569', stock: 2 }
+            ],
+            movements: [
+              { date: '2026-11-19 16:20', type: 'Venta Tienda', delta: '-9', location: 'Tienda Virtual AVYRA', ref: 'ORD-8842' },
+              { date: '2026-11-21 10:10', type: 'Auditoría Stock', delta: '0', location: 'Bodega Regional (Demo)', ref: 'AUD-119' }
+            ]
+          },
+          {
+            id: 'prod-3',
+            code: 'AVY-003',
+            twinId: 'DT-AVYRA-003-7E1D',
+            name: 'Almohada de Cuello Premium',
+            category: 'Confort de Viaje',
+            archetype: 'pillow',
+            description: 'Almohada cervical ergonómica en forma de U con contornos elevados laterales para soporte lateral y mentoniano, funda suave desmontable y bolsa de compresión.',
+            features: [
+              'Espuma viscoelástica de rebote lento',
+              'Contornos laterales elevados anti-caída cervical',
+              'Funda transpirable removible y lavable',
+              'Incluye estuche compacto de viaje'
+            ],
+            status: 'Disponible',
+            stock: 46,
+            reportedStock: 46,
+            sold: 112,
+            inTransit: 0,
+            minStockAlert: 12,
+            priceUsd: 49,
+            storefrontAvailable: true,
+            topVariantName: 'Beige Cálido',
+            variants: [
+              { id: 'var-3a', name: 'Beige Cálido', sku: 'SKU-AVY003-BGE', hex: '#DFD2BE', stock: 22 },
+              { id: 'var-3b', name: 'Azul Profundo', sku: 'SKU-AVY003-NVY', hex: '#132C52', stock: 14 },
+              { id: 'var-3c', name: 'Borgoña Suave', sku: 'SKU-AVY003-BRG', hex: '#7C2436', stock: 10 }
+            ],
+            movements: [
+              { date: '2026-11-18 11:00', type: 'Entrada ERP', delta: '+30', location: 'Centro Logístico Quito (Demo)', ref: 'ERP-IN-398' },
+              { date: '2026-11-22 08:30', type: 'Venta Tienda', delta: '-5', location: 'Tienda Virtual AVYRA', ref: 'ORD-8843' }
+            ]
+          },
+          {
+            id: 'prod-4',
+            code: 'AVY-004',
+            twinId: 'DT-AVYRA-004-5B2A',
+            name: 'Organizador Tech Travel',
+            category: 'Accesorios Tech',
+            archetype: 'pouch',
+            description: 'Estuche organizador con cierre perimetral, divisiones elásticas para cables, adaptadores, SSD, powerbank y tarjetas SD, diseñado para mantener todo accesible en tránsito.',
+            features: [
+              'Apertura amplia de 180° con cierre reforzado',
+              'Bolsillos de malla y bandas elásticas modulables',
+              'Compartimento acolchado para disco portátil o powerbank',
+              'Interior resistente a salpicaduras'
+            ],
+            status: 'En Tránsito',
+            stock: 19,
+            reportedStock: 19,
+            sold: 83,
+            inTransit: 15,
+            minStockAlert: 10,
+            priceUsd: 39,
+            storefrontAvailable: true,
+            topVariantName: 'Gris Grafito',
+            variants: [
+              { id: 'var-4a', name: 'Gris Grafito', sku: 'SKU-AVY004-GRY', hex: '#334155', stock: 9 },
+              { id: 'var-4b', name: 'Azul Profundo', sku: 'SKU-AVY004-NVY', hex: '#0B1D3A', stock: 6 },
+              { id: 'var-4c', name: 'Borgoña', sku: 'SKU-AVY004-BRG', hex: '#6E1E2E', stock: 4 }
+            ],
+            movements: [
+              { date: '2026-11-21 15:25', type: 'Envío a Tránsito', delta: '-15', location: 'Tránsito Nacional (Demo)', ref: 'TRN-551' },
+              { date: '2026-11-22 12:10', type: 'Venta Tienda', delta: '-3', location: 'Tienda Virtual AVYRA', ref: 'ORD-8844' }
+            ]
+          },
+          {
+            id: 'prod-5',
+            code: 'AVY-005',
+            twinId: 'DT-AVYRA-005-8F6C',
+            name: 'Adaptador Universal AVYRA',
+            category: 'Energía y Conectividad',
+            archetype: 'adapter',
+            description: 'Adaptador de corriente compacto multi-enchufe compatible con clavijas internacionales, puertos USB-C y USB-A, rejillas de disipación y protección contra sobrecargas.',
+            features: [
+              'Compatible con enchufes tipo A, C, G e I (referencia demo)',
+              'Puertos de carga rápida USB-C y USB-A integrados',
+              'Carcasa ignífuga compacta de bolsillo',
+              'Indicador LED de energía y fusible reemplazable'
+            ],
+            status: 'Disponible',
+            stock: 52,
+            reportedStock: 52,
+            sold: 129,
+            inTransit: 6,
+            minStockAlert: 15,
+            priceUsd: 45,
+            storefrontAvailable: true,
+            topVariantName: 'Blanco Polar / Azul',
+            variants: [
+              { id: 'var-5a', name: 'Blanco Polar / Azul', sku: 'SKU-AVY005-WHT', hex: '#E2E8F0', stock: 24 },
+              { id: 'var-5b', name: 'Azul Profundo', sku: 'SKU-AVY005-NVY', hex: '#0B1D3A', stock: 16 },
+              { id: 'var-5c', name: 'Borgoña', sku: 'SKU-AVY005-BRG', hex: '#6E1E2E', stock: 12 }
+            ],
+            movements: [
+              { date: '2026-11-17 13:45', type: 'Entrada ERP', delta: '+40', location: 'Centro Logístico Quito (Demo)', ref: 'ERP-IN-390' },
+              { date: '2026-11-22 09:50', type: 'Venta Tienda', delta: '-7', location: 'Tienda Virtual AVYRA', ref: 'ORD-8841' }
+            ]
+          },
+          {
+            id: 'prod-6',
+            code: 'AVY-006',
+            twinId: 'DT-AVYRA-006-2D9E',
+            name: 'Báscula Digital Travel',
+            category: 'Instrumentos de Viaje',
+            archetype: 'scale',
+            description: 'Báscula digital portátil para equipaje con correa de alta resistencia, gancho metálico, pantalla retroiluminada de lectura clara y apagado automático.',
+            features: [
+              'Capacidad de pesaje hasta 50 kg con precisión de 50 g (demo)',
+              'Pantalla digital retroiluminada de alto contraste',
+              'Correa reforzada con hebilla de liberación rápida',
+              'Diseño liviano de mano para maletas y bolsos'
+            ],
+            status: 'Preparación',
+            stock: 9,
+            reportedStock: 11,
+            sold: 61,
+            inTransit: 4,
+            minStockAlert: 10,
+            priceUsd: 29,
+            storefrontAvailable: true,
+            topVariantName: 'Borgoña / Plata',
+            variants: [
+              { id: 'var-6a', name: 'Borgoña / Plata', sku: 'SKU-AVY006-BRG', hex: '#6E1E2E', stock: 4 },
+              { id: 'var-6b', name: 'Beige / Plata', sku: 'SKU-AVY006-BGE', hex: '#D8CBB8', stock: 3 },
+              { id: 'var-6c', name: 'Azul Profundo / Plata', sku: 'SKU-AVY006-NVY', hex: '#132C52', stock: 2 }
+            ],
+            movements: [
+              { date: '2026-11-20 17:00', type: 'Preparación Pedido', delta: '-4', location: 'Centro de Preparación (Demo)', ref: 'ORD-8842' },
+              { date: '2026-11-22 10:20', type: 'Venta Tienda', delta: '-2', location: 'Tienda Virtual AVYRA', ref: 'ORD-8845' }
+            ]
+          }
+        ],
+        orders: [
+          {
+            orderId: 'ORD-8841',
+            crmCustomerRef: 'CLI-INT-104',
+            productId: 'prod-1',
+            productCode: 'AVY-001',
+            productName: 'Maleta Inteligente AVYRA Pro',
+            units: 1,
+            stageIndex: 4, // Despacho
+            location: 'Hub Comercial Norte (Registro Logístico Demo)',
+            updatedAt: '2026-11-22 11:05',
+            history: [
+              { stage: 'Producto registrado', date: '2026-11-10 08:00', location: 'Sistema AVYRA Twin', note: 'Gemelo DT-AVYRA-001-9A4F vinculado al SKU.' },
+              { stage: 'Inventario disponible', date: '2026-11-12 10:30', location: 'Centro Logístico Quito (Demo)', note: 'Stock validado en ERP.' },
+              { stage: 'Pedido realizado', date: '2026-11-20 14:15', location: 'Tienda Virtual AVYRA', note: 'Pedido asociado a referencia interna CLI-INT-104.' },
+              { stage: 'Preparación', date: '2026-11-21 09:20', location: 'Centro de Preparación (Demo)', note: 'Inspección física y empaque completados.' },
+              { stage: 'Despacho', date: '2026-11-22 11:05', location: 'Hub Comercial Norte (Demo)', note: 'Salida programada hacia ruta de entrega (sin GPS vivo).' }
+            ]
+          },
+          {
+            orderId: 'ORD-8842',
+            crmCustomerRef: 'CLI-INT-219',
+            productId: 'prod-2',
+            productCode: 'AVY-002',
+            productName: 'Mochila Travel Elite',
+            units: 2,
+            stageIndex: 3, // Preparación
+            location: 'Centro de Preparación (Registro Logístico Demo)',
+            updatedAt: '2026-11-22 08:45',
+            history: [
+              { stage: 'Producto registrado', date: '2026-11-10 08:15', location: 'Sistema AVYRA Twin', note: 'Gemelo DT-AVYRA-002-3C8B activo.' },
+              { stage: 'Inventario disponible', date: '2026-11-12 11:00', location: 'Bodega Regional (Demo)', note: 'Disponibilidad confirmada.' },
+              { stage: 'Pedido realizado', date: '2026-11-21 16:05', location: 'Tienda Virtual AVYRA', note: 'Pedido vinculado a CLI-INT-219.' },
+              { stage: 'Preparación', date: '2026-11-22 08:45', location: 'Centro de Preparación (Demo)', note: 'En alistamiento y verificación de calidad.' }
+            ]
+          },
+          {
+            orderId: 'ORD-8843',
+            crmCustomerRef: 'CLI-INT-308',
+            productId: 'prod-3',
+            productCode: 'AVY-003',
+            productName: 'Almohada de Cuello Premium',
+            units: 1,
+            stageIndex: 5, // Entrega
+            location: 'Punto de Entrega Confirmado (Registro Demo)',
+            updatedAt: '2026-11-21 18:10',
+            history: [
+              { stage: 'Producto registrado', date: '2026-11-10 09:00', location: 'Sistema AVYRA Twin', note: 'Gemelo DT-AVYRA-003-7E1D registrado.' },
+              { stage: 'Inventario disponible', date: '2026-11-12 12:00', location: 'Centro Logístico Quito (Demo)', note: 'Disponible para despacho.' },
+              { stage: 'Pedido realizado', date: '2026-11-18 12:30', location: 'Tienda Virtual AVYRA', note: 'Orden asociada a CLI-INT-308.' },
+              { stage: 'Preparación', date: '2026-11-19 09:00', location: 'Centro de Preparación (Demo)', note: 'Empacado con bolsa de viaje.' },
+              { stage: 'Despacho', date: '2026-11-20 10:15', location: 'Tránsito Nacional (Demo)', note: 'Enviado mediante operador logístico.' },
+              { stage: 'Entrega', date: '2026-11-21 18:10', location: 'Punto de Entrega Confirmado (Demo)', note: 'Entrega registrada en sistema.' }
+            ]
+          },
+          {
+            orderId: 'ORD-8845',
+            crmCustomerRef: 'CLI-INT-412',
+            productId: 'prod-6',
+            productCode: 'AVY-006',
+            productName: 'Báscula Digital Travel',
+            units: 2,
+            stageIndex: 2, // Pedido realizado
+            location: 'Tienda Virtual AVYRA (Registro Demo)',
+            updatedAt: '2026-11-22 10:20',
+            history: [
+              { stage: 'Producto registrado', date: '2026-11-10 09:30', location: 'Sistema AVYRA Twin', note: 'Gemelo DT-AVYRA-006-2D9E registrado.' },
+              { stage: 'Inventario disponible', date: '2026-11-12 13:10', location: 'Centro Logístico Quito (Demo)', note: 'Stock inicial disponible.' },
+              { stage: 'Pedido realizado', date: '2026-11-22 10:20', location: 'Tienda Virtual AVYRA', note: 'Orden asociada a CLI-INT-412, pendiente de preparación.' }
+            ]
+          }
+        ],
+        acknowledgedAlerts: []
+      };
+    }
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return createInitialDemoState();
+        const parsed = JSON.parse(raw);
+        if (!parsed || !Array.isArray(parsed.products)) {
+          return createInitialDemoState();
+        }
+        return parsed;
+      } catch (err) {
+        console.warn('Error leyendo estado local, usando datos demo:', err);
+        return createInitialDemoState();
+      }
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+        const el = document.getElementById('db-sync-indicator');
+        if (el) {
+          el.textContent = 'Guardado en base local · ' + new Date().toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit' });
+        }
+      } catch (err) {
+        console.error('Error guardando estado:', err);
+      }
+    }
+
+    let appState = loadState();
+
+    // Notificación visual flotante (reemplazo de alert())
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+      const colorMap = {
+        info: 'bg-avyra-blue text-white border-avyra-blueLight',
+        success: 'bg-emerald-800 text-white border-emerald-700',
+        warning: 'bg-avyra-burgundy text-white border-avyra-burgundyLight'
+      };
+      const toast = document.createElement('div');
+      toast.className = `pointer-events-auto px-4 py-3 rounded-xl border shadow-lg text-xs sm:text-sm font-medium fade-in ${colorMap[type] || colorMap.info}`;
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.25s ease';
+        setTimeout(() => toast.remove(), 260);
+      }, 3200);
+    }
+
+    // Cálculo dinámico de alertas a partir del estado real de productos y pedidos
+    function computeAlerts() {
+      const alerts = [];
+
+      appState.products.forEach((p) => {
+        if (p.stock <= p.minStockAlert) {
+          alerts.push({
+            id: `alert-stock-${p.id}`,
+            category: 'stock',
+            severity: 'alta',
+            productId: p.id,
+            title: `Bajo inventario: ${p.code} – ${p.name}`,
+            detail: `Stock actual: ${p.stock} uds (mínimo sugerido: ${p.minStockAlert} uds). Datos de demostración.`
+          });
+        }
+
+        const diff = Number(p.stock) - Number(p.reportedStock);
+        if (diff !== 0) {
+          alerts.push({
+            id: `alert-diff-${p.id}`,
+            category: 'discrepancy',
+            severity: 'media',
+            productId: p.id,
+            title: `Diferencia de inventario en ${p.code}`,
+            detail: `Registrado: ${p.stock} uds vs. Reportado: ${p.reportedStock} uds (Diferencia: ${diff > 0 ? '+' + diff : diff}).`
+          });
+        }
+
+        if (p.status === 'Preparación' || p.status === 'En Tránsito') {
+          alerts.push({
+            id: `alert-status-${p.id}`,
+            category: 'dispatch',
+            severity: 'info',
+            productId: p.id,
+            title: `Estado "${p.status}" en ${p.code}`,
+            detail: `${p.name} · En tránsito: ${p.inTransit} uds · Vendidos: ${p.sold} uds.`
+          });
+        }
+      });
+
+      appState.orders.forEach((ord) => {
+        const stageName = TRACE_STAGES[ord.stageIndex] || 'En proceso';
+        if (stageName === 'Pedido realizado' || stageName === 'Preparación') {
+          alerts.push({
+            id: `alert-ord-${ord.orderId}-${ord.stageIndex}`,
+            category: 'dispatch',
+            severity: 'media',
+            productId: ord.productId,
+            title: `Pendiente de despacho: ${ord.orderId} (${stageName})`,
+            detail: `${ord.productCode} – ${ord.productName} · Ref. CRM: ${ord.crmCustomerRef}.`
+          });
+        }
+      });
+
+      return alerts.map((a) => ({
+        ...a,
+        acknowledged: appState.acknowledgedAlerts.includes(a.id)
+      }));
+    }
+
+    function updateAlertBadges() {
+      const unread = computeAlerts().filter((a) => !a.acknowledged).length;
+      const navBadge = document.getElementById('nav-alert-badge');
+      const mobileBadge = document.getElementById('mobile-alert-count');
+      if (navBadge) navBadge.textContent = String(unread);
+      if (mobileBadge) mobileBadge.textContent = String(unread);
+    }
+
+    function getSelectedProduct() {
+      return appState.products.find((p) => p.id === appState.selectedProductId) || appState.products[0];
+    }
+
+    function getSelectedVariant(product) {
+      const varId = appState.selectedVariantByProduct[product.id];
+      return product.variants.find((v) => v.id === varId) || product.variants[0];
+    }
+
+    function getFilteredProducts() {
+      const q = (appState.searchQuery || '').trim().toLowerCase();
+      const statusFilter = document.getElementById('catalog-filter-status')?.value || 'ALL';
+
+      return appState.products.filter((p) => {
+        const matchesStatus = statusFilter === 'ALL' || p.status === statusFilter;
+        const matchesQuery =
+          !q ||
+          p.code.toLowerCase().includes(q) ||
+          p.name.toLowerCase().includes(q) ||
+          p.twinId.toLowerCase().includes(q) ||
+          p.category.toLowerCase().includes(q) ||
+          p.variants.some((v) => v.name.toLowerCase().includes(q) || v.sku.toLowerCase().includes(q));
+        return matchesStatus && matchesQuery;
+      });
+    }
+
+    // =========================================================================
+    // ILUSTRACIONES SVG DE REFERENCIA VISUAL DEL PRODUCTO FÍSICO (MARCADA DEMO)
+    // =========================================================================
+    function renderProductReferenceSVG(product, accentHex) {
+      const mainColor = accentHex || '#132C52';
+      const secondaryColor = '#6E1E2E';
+      const lightAccent = '#F4EFE8';
+
+      switch (product.archetype) {
+        case 'suitcase':
+          return `
+            <svg viewBox="0 0 240 150" class="w-full h-36" role="img" aria-label="Referencia visual Maleta Inteligente AVYRA Pro">
+              <rect x="78" y="28" width="84" height="92" rx="14" fill="${mainColor}" stroke="#0F172A" stroke-width="2" />
+              <line x1="98" y1="34" x2="98" y2="114" stroke="rgba(255,255,255,0.25)" stroke-width="3" />
+              <line x1="120" y1="34" x2="120" y2="114" stroke="rgba(255,255,255,0.25)" stroke-width="3" />
+              <line x1="142" y1="34" x2="142" y2="114" stroke="rgba(255,255,255,0.25)" stroke-width="3" />
+              <path d="M104 28 V14 H136 V28" fill="none" stroke="#334155" stroke-width="4" stroke-linecap="round" />
+              <rect x="92" y="54" width="56" height="36" rx="6" fill="rgba(255,255,255,0.12)" stroke="${lightAccent}" stroke-width="1.2" />
+              <circle cx="90" cy="126" r="6" fill="#1E293B" />
+              <circle cx="150" cy="126" r="6" fill="#1E293B" />
+            </svg>`;
+        case 'backpack':
+          return `
+            <svg viewBox="0 0 240 150" class="w-full h-36" role="img" aria-label="Referencia visual Mochila Travel Elite">
+              <path d="M84 44 C84 26, 156 26, 156 44 L162 124 C162 130, 156 134, 150 134 L90 134 C84 134, 78 130, 78 124 Z" fill="${mainColor}" stroke="#0F172A" stroke-width="2" />
+              <path d="M104 30 C104 18, 136 18, 136 30" fill="none" stroke="${secondaryColor}" stroke-width="4" />
+              <rect x="94" y="76" width="52" height="42" rx="8" fill="rgba(255,255,255,0.14)" stroke="${lightAccent}" stroke-width="1.3" />
+              <line x1="94" y1="90" x2="146" y2="90" stroke="${lightAccent}" stroke-width="1.5" />
+            </svg>`;
+        case 'pillow':
+          return `
+            <svg viewBox="0 0 240 150" class="w-full h-36" role="img" aria-label="Referencia visual Almohada de Cuello Premium">
+              <path d="M62 66 C62 36, 178 36, 178 66 C178 96, 154 118, 138 118 C126 118, 124 92, 120 92 C116 92, 114 118, 102 118 C86 118, 62 96, 62 66 Z" fill="${mainColor}" stroke="#0F172A" stroke-width="2" />
+              <path d="M78 64 C78 48, 162 48, 162 64" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="3" stroke-linecap="round" />
+            </svg>`;
+        case 'pouch':
+          return `
+            <svg viewBox="0 0 240 150" class="w-full h-36" role="img" aria-label="Referencia visual Organizador Tech Travel">
+              <rect x="64" y="38" width="112" height="76" rx="14" fill="${mainColor}" stroke="#0F172A" stroke-width="2" />
+              <rect x="74" y="48" width="92" height="56" rx="9" fill="none" stroke="${lightAccent}" stroke-dasharray="5 3" stroke-width="1.5" />
+              <rect x="86" y="62" width="28" height="14" rx="3" fill="rgba(255,255,255,0.22)" />
+              <rect x="122" y="62" width="32" height="28" rx="4" fill="rgba(255,255,255,0.16)" />
+            </svg>`;
+        case 'adapter':
+          return `
+            <svg viewBox="0 0 240 150" class="w-full h-36" role="img" aria-label="Referencia visual Adaptador Universal AVYRA">
+              <rect x="82" y="34" width="76" height="82" rx="14" fill="${mainColor}" stroke="#0F172A" stroke-width="2" />
+              <circle cx="106" cy="64" r="6" fill="#0F172A" />
+              <circle cx="134" cy="64" r="6" fill="#0F172A" />
+              <rect x="96" y="84" width="16" height="8" rx="2" fill="#E2E8F0" />
+              <rect x="120" y="84" width="20" height="8" rx="2" fill="#E2E8F0" />
+              <line x1="96" y1="22" x2="96" y2="34" stroke="#64748B" stroke-width="4" />
+              <line x1="144" y1="22" x2="144" y2="34" stroke="#64748B" stroke-width="4" />
+            </svg>`;
+        default:
+          return `
+            <svg viewBox="0 0 240 150" class="w-full h-36" role="img" aria-label="Referencia visual Báscula Digital Travel">
+              <path d="M120 18 C132 18, 138 28, 132 38" fill="none" stroke="#475569" stroke-width="3.5" stroke-linecap="round" />
+              <rect x="86" y="38" width="68" height="74" rx="14" fill="${mainColor}" stroke="#0F172A" stroke-width="2" />
+              <rect x="96" y="50" width="48" height="26" rx="5" fill="#F8FAFC" stroke="#0F172A" stroke-width="1.5" />
+              <text x="120" y="67" text-anchor="middle" font-size="11" font-weight="bold" fill="#0B1D3A">14.8 kg</text>
+              <path d="M120 112 V130" stroke="#475569" stroke-width="4" stroke-linecap="round" />
+            </svg>`;
+      }
+    }
+
+    // =========================================================================
+    // MOTOR 3D PROCEDIMENTAL CON THREE.JS (MODELOS DISTINTOS POR PRODUCTO)
+    // =========================================================================
+    const Twin3DEngine = (() => {
+      let scene, camera, renderer, rootGroup, animationFrameId;
+      let isDragging = false;
+      let prevPointer = { x: 0, y: 0 };
+      let autoRotate = true;
+      let targetZoom = 5.4;
+      let currentZoom = 5.4;
+      let currentHex = '#132C52';
+      let currentArchetype = 'suitcase';
+
+      function init() {
+        const container = document.getElementById('twin-canvas-container');
+        const fallback = document.getElementById('webgl-fallback');
+        if (!container) return;
+
+        try {
+          scene = new THREE.Scene();
+          scene.background = null;
+
+          const width = container.clientWidth || 600;
+          const height = container.clientHeight || 400;
+
+          camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 100);
+          camera.position.set(2.4, 1.8, currentZoom);
+          camera.lookAt(0, 0, 0);
+
+          renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+          renderer.setSize(width, height);
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+          renderer.shadowMap.enabled = true;
+
+          container.innerHTML = '';
+          container.appendChild(renderer.domElement);
+
+          // Iluminación profesional
+          const ambientLight = new THREE.AmbientLight(0xffffff, 0.72);
+          scene.add(ambientLight);
+
+          const dirLight = new THREE.DirectionalLight(0xffffff, 0.95);
+          dirLight.position.set(4, 6, 5);
+          dirLight.castShadow = true;
+          scene.add(dirLight);
+
+          const rimLight = new THREE.DirectionalLight(0xf4efe8, 0.45);
+          rimLight.position.set(-4, -2, -3);
+          scene.add(rimLight);
+
+          // Plataforma base sutil
+          const gridHelper = new THREE.GridHelper(6, 12, 0x0b1d3a, 0xcbd5e1);
+          gridHelper.position.y = -1.45;
+          gridHelper.material.opacity = 0.25;
+          gridHelper.material.transparent = true;
+          scene.add(gridHelper);
+
+          rootGroup = new THREE.Group();
+          scene.add(rootGroup);
+
+          buildArchetypeModel(currentArchetype, currentHex);
+          bindEvents(container);
+          startLoop();
+        } catch (err) {
+          console.warn('Three.js fallback activado:', err);
+          if (fallback) fallback.classList.remove('hidden');
+        }
+      }
+
+      function clearGroup(group) {
+        while (group.children.length > 0) {
+          const child = group.children[0];
+          group.remove(child);
+          if (child.geometry) child.geometry.dispose();
+          if (child.material) {
+            if (Array.isArray(child.material)) child.material.forEach((m) => m.dispose());
+            else child.material.dispose();
+          }
+        }
+      }
+
+      // Construye geometría 3D fiel a la forma física de cada producto
+      function buildArchetypeModel(archetype, hexColor) {
+        if (!rootGroup) return;
+        clearGroup(rootGroup);
+        currentArchetype = archetype;
+        currentHex = hexColor;
+
+        const mainMat = new THREE.MeshStandardMaterial({
+          color: new THREE.Color(hexColor),
+          roughness: 0.36,
+          metalness: 0.18
+        });
+        const trimMat = new THREE.MeshStandardMaterial({
+          color: 0x1e293b,
+          roughness: 0.5,
+          metalness: 0.55
+        });
+        const accentMat = new THREE.MeshStandardMaterial({
+          color: 0x6e1e2e,
+          roughness: 0.4,
+          metalness: 0.2
+        });
+        const metalMat = new THREE.MeshStandardMaterial({
+          color: 0xcbd5e1,
+          roughness: 0.25,
+          metalness: 0.85
+        });
+
+        if (archetype === 'suitcase') {
+          // Cuerpo rígido de maleta
+          const body = new THREE.Mesh(new THREE.BoxGeometry(1.55, 2.2, 0.72), mainMat);
+          body.position.y = 0.1;
+          rootGroup.add(body);
+
+          // Nervaduras horizontales
+          [-0.55, 0.1, 0.75].forEach((yPos) => {
+            const rib = new THREE.Mesh(new THREE.BoxGeometry(1.58, 0.08, 0.76), trimMat);
+            rib.position.set(0, yPos, 0);
+            rootGroup.add(rib);
+          });
+
+          // Barras telescópicas y manija superior
+          [-0.35, 0.35].forEach((xPos) => {
+            const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.75, 12), metalMat);
+            bar.position.set(xPos, 1.52, -0.15);
+            rootGroup.add(bar);
+          });
+          const topBar = new THREE.Mesh(new THREE.BoxGeometry(0.82, 0.08, 0.12), trimMat);
+          topBar.position.set(0, 1.88, -0.15);
+          rootGroup.add(topBar);
+
+          // 4 ruedas
+          const wheelGeo = new THREE.CylinderGeometry(0.14, 0.14, 0.1, 16);
+          wheelGeo.rotateZ(Math.PI / 2);
+          [
+            [-0.58, -1.12, 0.22],
+            [0.58, -1.12, 0.22],
+            [-0.58, -1.12, -0.22],
+            [0.58, -1.12, -0.22]
+          ].forEach(([wx, wy, wz]) => {
+            const wheel = new THREE.Mesh(wheelGeo, trimMat);
+            wheel.position.set(wx, wy, wz);
+            rootGroup.add(wheel);
+          });
+        } else if (archetype === 'backpack') {
+          // Cuerpo principal de mochila estructurada
+          const pack = new THREE.Mesh(new THREE.BoxGeometry(1.5, 2.05, 0.82), mainMat);
+          pack.position.y = 0.1;
+          rootGroup.add(pack);
+
+          // Bolsillo frontal inclinado
+          const frontPocket = new THREE.Mesh(new THREE.BoxGeometry(1.26, 1.15, 0.28), accentMat);
+          frontPocket.position.set(0, -0.22, 0.48);
+          rootGroup.add(frontPocket);
+
+          // Asa superior
+          const handle = new THREE.Mesh(new THREE.TorusGeometry(0.26, 0.05, 10, 20, Math.PI), trimMat);
+          handle.position.set(0, 1.14, 0);
+          rootGroup.add(handle);
+
+          // Correas traseras
+          [-0.45, 0.45].forEach((sx) => {
+            const strap = new THREE.Mesh(new THREE.BoxGeometry(0.18, 1.6, 0.1), trimMat);
+            strap.position.set(sx, 0.15, -0.45);
+            rootGroup.add(strap);
+          });
+        } else if (archetype === 'pillow') {
+          // Almohada cervical en U usando Torus parcial + contornos laterales
+          const uBase = new THREE.Mesh(new THREE.TorusGeometry(0.92, 0.36, 18, 36, Math.PI * 1.35), mainMat);
+          uBase.rotation.z = Math.PI * 0.82;
+          uBase.rotation.x = Math.PI * 0.15;
+          uBase.position.y = 0.05;
+          rootGroup.add(uBase);
+
+          // Elevaciones ergonómicas laterales
+          [-0.85, 0.85].forEach((lx) => {
+            const lobe = new THREE.Mesh(new THREE.SphereGeometry(0.42, 18, 18), mainMat);
+            lobe.scale.set(0.9, 1.25, 0.95);
+            lobe.position.set(lx, 0.22, 0.1);
+            rootGroup.add(lobe);
+          });
+        } else if (archetype === 'pouch') {
+          // Organizador tecnológico tipo estuche
+          const caseMain = new THREE.Mesh(new THREE.BoxGeometry(2.1, 1.35, 0.58), mainMat);
+          caseMain.position.y = 0.05;
+          rootGroup.add(caseMain);
+
+          // Línea de cierre perimetral
+          const zipper = new THREE.Mesh(new THREE.BoxGeometry(2.14, 0.06, 0.62), metalMat);
+          zipper.position.set(0, 0.18, 0);
+          rootGroup.add(zipper);
+
+          // Correa de mano lateral
+          const loop = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.04, 10, 18), trimMat);
+          loop.position.set(1.12, 0.2, 0);
+          rootGroup.add(loop);
+        } else if (archetype === 'adapter') {
+          // Bloque compacto de adaptador universal
+          const block = new THREE.Mesh(new THREE.BoxGeometry(1.35, 1.35, 1.25), mainMat);
+          block.position.y = 0.05;
+          rootGroup.add(block);
+
+          // Panel frontal con puertos
+          const face = new THREE.Mesh(new THREE.BoxGeometry(1.05, 1.05, 0.08), trimMat);
+          face.position.set(0, 0.05, 0.64);
+          rootGroup.add(face);
+
+          // Clavijas metálicas superiores
+          [-0.32, 0.32].forEach((px) => {
+            const prong = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.42, 12), metalMat);
+            prong.position.set(px, 0.92, 0);
+            rootGroup.add(prong);
+          });
+        } else {
+          // Báscula digital de equipaje
+          const housing = new THREE.Mesh(new THREE.BoxGeometry(1.15, 1.55, 0.42), mainMat);
+          housing.position.y = 0.1;
+          rootGroup.add(housing);
+
+          // Pantalla digital frontal
+          const screenMat = new THREE.MeshStandardMaterial({
+            color: 0xe2e8f0,
+            emissive: 0x132c52,
+            emissiveIntensity: 0.25,
+            roughness: 0.2
+          });
+          const screen = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.45, 0.06), screenMat);
+          screen.position.set(0, 0.42, 0.22);
+          rootGroup.add(screen);
+
+          // Correa superior y gancho inferior
+          const strap = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.65, 0.08), trimMat);
+          strap.position.set(0, 1.15, 0);
+          rootGroup.add(strap);
+
+          const hook = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.045, 10, 20, Math.PI * 1.4), metalMat);
+          hook.position.set(0, -0.82, 0);
+          rootGroup.add(hook);
+        }
+      }
+
+      function bindEvents(container) {
+        container.addEventListener('mousedown', (e) => {
+          isDragging = true;
+          prevPointer = { x: e.clientX, y: e.clientY };
+        });
+
+        window.addEventListener('mouseup', () => {
+          isDragging = false;
+        });
+
+        window.addEventListener('mousemove', (e) => {
+          if (!isDragging || !rootGroup) return;
+          const dx = e.clientX - prevPointer.x;
+          const dy = e.clientY - prevPointer.y;
+          prevPointer = { x: e.clientX, y: e.clientY };
+          rootGroup.rotation.y += dx * 0.012;
+          rootGroup.rotation.x = Math.max(-1.1, Math.min(1.1, rootGroup.rotation.x + dy * 0.01));
+        });
+
+        // Soporte táctil para móviles y tablets
+        container.addEventListener('touchstart', (e) => {
+          if (e.touches.length === 1) {
+            isDragging = true;
+            prevPointer = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+          }
+        }, { passive: true });
+
+        container.addEventListener('touchmove', (e) => {
+          if (!isDragging || e.touches.length !== 1 || !rootGroup) return;
+          const dx = e.touches[0].clientX - prevPointer.x;
+          const dy = e.touches[0].clientY - prevPointer.y;
+          prevPointer = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+          rootGroup.rotation.y += dx * 0.014;
+          rootGroup.rotation.x = Math.max(-1.1, Math.min(1.1, rootGroup.rotation.x + dy * 0.012));
+        }, { passive: true });
+
+        container.addEventListener('touchend', () => {
+          isDragging = false;
+        });
+
+        container.addEventListener('wheel', (e) => {
+          e.preventDefault();
+          targetZoom = Math.max(2.8, Math.min(9.5, targetZoom + e.deltaY * 0.004));
+        }, { passive: false });
+
+        window.addEventListener('resize', resize);
+      }
+
+      function resize() {
+        const container = document.getElementById('twin-canvas-container');
+        if (!container || !renderer || !camera) return;
+        const w = container.clientWidth || 600;
+        const h = container.clientHeight || 400;
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w, h);
+      }
+
+      function startLoop() {
+        if (animationFrameId) cancelAnimationFrame(animationFrameId);
+        const animate = () => {
+          animationFrameId = requestAnimationFrame(animate);
+          if (!renderer || !scene || !camera) return;
+
+          if (autoRotate && !isDragging && rootGroup) {
+            rootGroup.rotation.y += 0.008;
+          }
+
+          currentZoom += (targetZoom - currentZoom) * 0.1;
+          const dir = new THREE.Vector3().subVectors(camera.position, new THREE.Vector3(0, 0, 0)).normalize();
+          camera.position.copy(dir.multiplyScalar(currentZoom));
+          camera.lookAt(0, 0, 0);
+
+          renderer.render(scene, camera);
+        };
+        animate();
+      }
+
+      return {
+        init,
+        resize,
+        setProductModel(archetype, hexColor) {
+          buildArchetypeModel(archetype, hexColor);
+          if (rootGroup) {
+            rootGroup.rotation.set(0.12, 0.45, 0);
+          }
+        },
+        setVariantColor(hexColor) {
+          buildArchetypeModel(currentArchetype, hexColor);
+        },
+        zoomBy(delta) {
+          targetZoom = Math.max(2.8, Math.min(9.5, targetZoom + delta));
+        },
+        toggleAutoRotate() {
+          autoRotate = !autoRotate;
+          return autoRotate;
+        },
+        resetView() {
+          targetZoom = 5.4;
+          if (rootGroup) {
+            rootGroup.rotation.set(0.12, 0.45, 0);
+          }
+        }
+      };
+    })();
+
+    // =========================================================================
+    // GRÁFICOS CON CHART.JS (PANEL PRINCIPAL)
+    // =========================================================================
+    let movementsChartInstance = null;
+    let stockSalesChartInstance = null;
+
+    function renderCharts() {
+      const ctxMov = document.getElementById('chart-movements');
+      const ctxStock = document.getElementById('chart-stock-sales');
+      if (!ctxMov || !ctxStock || typeof Chart === 'undefined') return;
+
+      if (movementsChartInstance) movementsChartInstance.destroy();
+      movementsChartInstance = new Chart(ctxMov, {
+        type: 'line',
+        data: {
+          labels: appState.activitySeries.labels,
+          datasets: [
+            {
+              label: 'Entradas (Demo)',
+              data: appState.activitySeries.entradas,
+              borderColor: '#0B1D3A',
+              backgroundColor: 'rgba(11, 29, 58, 0.12)',
+              tension: 0.35,
+              fill: true
+            },
+            {
+              label: 'Ventas / Salidas (Demo)',
+              data: appState.activitySeries.salidas,
+              borderColor: '#6E1E2E',
+              backgroundColor: 'rgba(110, 30, 46, 0.12)',
+              tension: 0.35,
+              fill: true
+            },
+            {
+              label: 'Despachos (Demo)',
+              data: appState.activitySeries.despachos,
+              borderColor: '#64748B',
+              borderDash: [5, 5],
+              tension: 0.35,
+              fill: false
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'top', labels: { font: { family: 'Inter', size: 11 } } }
+          },
+          scales: {
+            y: { beginAtZero: true, grid: { color: '#F1F5F9' } },
+            x: { grid: { display: false } }
+          }
+        }
+      });
+
+      if (stockSalesChartInstance) stockSalesChartInstance.destroy();
+      stockSalesChartInstance = new Chart(ctxStock, {
+        type: 'bar',
+        data: {
+          labels: appState.products.map((p) => p.code),
+          datasets: [
+            {
+              label: 'En Inventario',
+              data: appState.products.map((p) => p.stock),
+              backgroundColor: '#132C52',
+              borderRadius: 6
+            },
+            {
+              label: 'Vendidos',
+              data: appState.products.map((p) => p.sold),
+              backgroundColor: '#8C283C',
+              borderRadius: 6
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'top', labels: { font: { family: 'Inter', size: 11 } } }
+          },
+          scales: {
+            y: { beginAtZero: true, grid: { color: '#F1F5F9' } },
+            x: { grid: { display: false } }
+          }
+        }
+      });
+    }
+
+    // =========================================================================
+    // RENDERIZADO DE SECCIONES
+    // =========================================================================
+    function getStatusBadgeClasses(status) {
+      switch (status) {
+        case 'Disponible':
+          return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+        case 'Stock Bajo':
+          return 'bg-rose-50 text-avyra-burgundy border-rose-200';
+        case 'En Tránsito':
+          return 'bg-blue-50 text-avyra-blue border-blue-200';
+        default:
+          return 'bg-amber-50 text-amber-800 border-amber-200';
+      }
+    }
+
+    function renderDashboard() {
+      const totalProducts = appState.products.length;
+      const digitalTwins = appState.products.length;
+      const totalStock = appState.products.reduce((acc, p) => acc + Number(p.stock || 0), 0);
+      const totalSold = appState.products.reduce((acc, p) => acc + Number(p.sold || 0), 0);
+      const totalTransit = appState.products.reduce((acc, p) => acc + Number(p.inTransit || 0), 0);
+      const lowStockCount = appState.products.filter((p) => p.stock <= p.minStockAlert).length;
+
+      const kpis = [
+        { label: 'Productos Registrados', value: totalProducts, sub: 'Catálogo AVYRA', accent: 'border-l-avyra-blue' },
+        { label: 'Gemelos Digitales', value: digitalTwins, sub: '100% activos (Demo)', accent: 'border-l-avyra-burgundy' },
+        { label: 'En Inventario', value: totalStock, sub: 'Unidades en bodega', accent: 'border-l-avyra-blue' },
+        { label: 'Productos Vendidos', value: totalSold, sub: 'Histórico demo', accent: 'border-l-avyra-burgundy' },
+        { label: 'En Tránsito', value: totalTransit, sub: 'Logística en curso', accent: 'border-l-slate-600' },
+        {
+          label: 'Estado del Catálogo',
+          value: lowStockCount === 0 ? 'Óptimo' : `${lowStockCount} Alerta(s)`,
+          sub: lowStockCount === 0 ? 'Sin quiebres críticos' : 'Revisar bajo stock',
+          accent: lowStockCount === 0 ? 'border-l-emerald-600' : 'border-l-avyra-burgundy'
+        }
+      ];
+
+      const kpiGrid = document.getElementById('kpi-grid');
+      if (kpiGrid) {
+        kpiGrid.innerHTML = kpis
+          .map(
+            (k) => `
+          <div class="bg-white rounded-2xl border border-slate-200/80 border-l-4 ${k.accent} p-4 shadow-card">
+            <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500">${k.label}</p>
+            <p class="text-2xl font-extrabold text-avyra-blue mt-1">${k.value}</p>
+            <p class="text-xs text-slate-500 mt-1">${k.sub}</p>
+          </div>`
+          )
+          .join('');
+      }
+
+      // Estado de productos con acceso directo a su gemelo 3D
+      const statusList = document.getElementById('dash-product-status-list');
+      if (statusList) {
+        statusList.innerHTML = appState.products
+          .map(
+            (p) => `
+          <div class="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-50 hover:bg-avyra-beige/60 transition border border-slate-100">
+            <div class="min-w-0">
+              <p class="text-xs font-bold text-avyra-blue truncate">${p.code} · ${p.name}</p>
+              <p class="text-[11px] text-slate-500">Stock: <strong>${p.stock}</strong> · Vendidos: ${p.sold}</p>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold border ${getStatusBadgeClasses(p.status)}">${p.status}</span>
+              <button
+                type="button"
+                onclick="openProductIn3D('${p.id}')"
+                class="px-2.5 py-1 rounded-lg bg-avyra-blue text-white text-[11px] font-semibold hover:bg-avyra-blueLight transition"
+              >
+                3D
+              </button>
+            </div>
+          </div>`
+          )
+          .join('');
+      }
+
+      // Alertas en dashboard
+      const alerts = computeAlerts();
+      const alertsEl = document.getElementById('dash-alerts-list');
+      if (alertsEl) {
+        if (!alerts.length) {
+          alertsEl.innerHTML = `<p class="text-xs text-slate-500 py-6 text-center">No hay alertas activas en este momento.</p>`;
+        } else {
+          alertsEl.innerHTML = alerts
+            .slice(0, 6)
+            .map(
+              (a) => `
+            <div class="p-3 rounded-xl border ${a.acknowledged ? 'bg-slate-50 border-slate-200 opacity-65' : 'bg-avyra-beige/50 border-avyra-beigeDark'} flex items-start justify-between gap-2">
+              <div>
+                <p class="text-xs font-bold text-avyra-blue">${a.title}</p>
+                <p class="text-[11px] text-slate-600 mt-0.5">${a.detail}</p>
+              </div>
+              <button
+                type="button"
+                onclick="acknowledgeAlert('${a.id}')"
+                class="text-[11px] font-semibold px-2 py-1 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 shrink-0"
+              >
+                ${a.acknowledged ? 'Leída' : 'OK'}
+              </button>
+            </div>`
+            )
+            .join('');
+        }
+      }
+
+      renderCharts();
+    }
+
+    function renderCatalog() {
+      const grid = document.getElementById('catalog-grid');
+      if (!grid) return;
+
+      const list = getFilteredProducts();
+      if (!list.length) {
+        grid.innerHTML = `
+          <div class="col-span-full bg-white rounded-2xl border border-slate-200 p-8 text-center">
+            <p class="font-bold text-avyra-blue">No se encontraron gemelos digitales con ese filtro.</p>
+            <p class="text-xs text-slate-500 mt-1">Intenta limpiar la búsqueda o cambiar el estado seleccionado.</p>
+          </div>`;
+        return;
+      }
+
+      grid.innerHTML = list
+        .map((p) => {
+          const variant = getSelectedVariant(p);
+          const lastMov = p.movements[p.movements.length - 1];
+          return `
+          <article class="bg-white rounded-2xl border border-slate-200/80 shadow-card overflow-hidden flex flex-col justify-between hover:shadow-soft transition">
+            <div>
+              <!-- Encabezado y estado -->
+              <div class="p-4 border-b border-slate-100 flex items-start justify-between gap-2 bg-slate-50/60">
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs font-extrabold text-avyra-burgundy uppercase">${p.code}</span>
+                    <span class="text-[11px] font-mono text-slate-500">${p.twinId}</span>
+                  </div>
+                  <h3 class="text-base font-bold text-avyra-blue mt-0.5">${p.name}</h3>
+                </div>
+                <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold border shrink-0 ${getStatusBadgeClasses(p.status)}">
+                  ${p.status}
+                </span>
+              </div>
+
+              <!-- Referencia visual del producto real (SVG marcado como referencia demo) -->
+              <div class="bg-avyra-beige/45 px-4 pt-3 pb-2 border-b border-slate-100 relative">
+                <span class="absolute top-2.5 right-3 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/90 text-slate-600 border border-slate-200">
+                  Referencia visual / Demo
+                </span>
+                ${renderProductReferenceSVG(p, variant ? variant.hex : '#132C52')}
+              </div>
+
+              <!-- Descripción y métricas -->
+              <div class="p-4 space-y-3">
+                <p class="text-xs text-slate-600 leading-relaxed">${p.description}</p>
+
+                <div class="grid grid-cols-3 gap-2 text-center bg-slate-50 rounded-xl p-2.5 border border-slate-100">
+                  <div>
+                    <p class="text-[10px] uppercase font-bold text-slate-400">Inventario</p>
+                    <p class="text-sm font-extrabold text-avyra-blue">${p.stock} uds</p>
+                  </div>
+                  <div>
+                    <p class="text-[10px] uppercase font-bold text-slate-400">Vendidos</p>
+                    <p class="text-sm font-extrabold text-avyra-burgundy">${p.sold} uds</p>
+                  </div>
+                  <div>
+                    <p class="text-[10px] uppercase font-bold text-slate-400">Precio</p>
+                    <p class="text-sm font-extrabold text-slate-800">$${p.priceUsd}</p>
+                  </div>
+                </div>
+
+                <!-- Colores / Variantes interactivas en tarjeta -->
+                <div>
+                  <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                    Variante: <span class="text-avyra-blue">${variant ? variant.name : ''}</span>
+                  </p>
+                  <div class="flex flex-wrap items-center gap-2">
+                    ${p.variants
+                      .map(
+                        (v) => `
+                      <button
+                        type="button"
+                        title="${v.name} (${v.sku})"
+                        onclick="selectProductVariant('${p.id}', '${v.id}')"
+                        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-medium transition ${
+                          variant && variant.id === v.id
+                            ? 'border-avyra-blue bg-avyra-blue text-white'
+                            : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                        }"
+                      >
+                        <span class="w-3 h-3 rounded-full border border-black/20" style="background-color:${v.hex}"></span>
+                        <span>${v.name}</span>
+                      </button>`
+                      )
+                      .join('')}
+                  </div>
+                </div>
+
+                <!-- Último movimiento -->
+                <div class="text-[11px] text-slate-500 bg-slate-50/80 rounded-lg p-2 border border-slate-100">
+                  <strong class="text-slate-700">Último movimiento:</strong>
+                  ${lastMov ? `${lastMov.type} (${lastMov.delta}) · ${lastMov.location} · ${lastMov.date}` : 'Sin movimientos registrados'}
+                </div>
+              </div>
+            </div>
+
+            <!-- Acciones -->
+            <div class="p-4 pt-0 flex items-center gap-2">
+              <button
+                type="button"
+                onclick="openProductIn3D('${p.id}')"
+                class="flex-1 py-2 px-3 rounded-xl bg-avyra-blue hover:bg-avyra-blueLight text-white text-xs font-semibold transition"
+              >
+                Abrir Gemelo 3D
+              </button>
+              <button
+                type="button"
+                onclick="jumpToErpWithProduct('${p.id}')"
+                class="py-2 px-3 rounded-xl bg-avyra-beige hover:bg-avyra-beigeDark text-avyra-blue text-xs font-semibold transition"
+              >
+                ERP / Stock
+              </button>
+            </div>
+          </article>`;
+        })
+        .join('');
+    }
+
+    function renderViewer3D() {
+      const product = getSelectedProduct();
+      const variant = getSelectedVariant(product);
+      if (!product) return;
+
+      const selectEl = document.getElementById('viewer-product-select');
+      if (selectEl) {
+        selectEl.innerHTML = appState.products
+          .map((p) => `<option value="${p.id}" ${p.id === product.id ? 'selected' : ''}>${p.code} – ${p.name}</option>`)
+          .join('');
+      }
+
+      document.getElementById('viewer-3d-badge').textContent = `${product.code} · ${product.twinId}`;
+      document.getElementById('viewer-3d-title').textContent = product.name;
+      document.getElementById('viewer-variant-sku').textContent = variant ? `${variant.sku} · Stock variante: ${variant.stock}` : '';
+
+      const varBtns = document.getElementById('viewer-variant-buttons');
+      if (varBtns) {
+        varBtns.innerHTML = product.variants
+          .map(
+            (v) => `
+          <button
+            type="button"
+            onclick="selectProductVariant('${product.id}', '${v.id}', true)"
+            class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-semibold transition ${
+              variant && variant.id === v.id
+                ? 'border-avyra-blue bg-avyra-blue text-white shadow-sm'
+                : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+            }"
+          >
+            <span class="w-3.5 h-3.5 rounded-full border border-black/25" style="background-color:${v.hex}"></span>
+            <span>${v.name}</span>
+          </button>`
+          )
+          .join('');
+      }
+
+      const inspector = document.getElementById('viewer-inspector-content');
+      if (inspector) {
+        inspector.innerHTML = `
+          <div class="flex items-center justify-between gap-2">
+            <span class="px-2.5 py-1 rounded-full text-xs font-semibold border ${getStatusBadgeClasses(product.status)}">${product.status}</span>
+            <span class="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+              ${product.storefrontAvailable ? 'Disponible en Tienda Virtual' : 'No visible en Tienda'}
+            </span>
+          </div>
+
+          <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">${product.description}</p>
+
+          <div class="grid grid-cols-2 gap-3 bg-avyra-beige/55 p-3.5 rounded-xl border border-avyra-beigeDark">
+            <div>
+              <p class="text-[10px] uppercase font-bold text-slate-500">Inventario Total</p>
+              <p class="text-lg font-extrabold text-avyra-blue">${product.stock} unidades</p>
+            </div>
+            <div>
+              <p class="text-[10px] uppercase font-bold text-slate-500">Unidades Vendidas</p>
+              <p class="text-lg font-extrabold text-avyra-burgundy">${product.sold} unidades</p>
+            </div>
+            <div>
+              <p class="text-[10px] uppercase font-bold text-slate-500">En Tránsito</p>
+              <p class="text-sm font-bold text-slate-800">${product.inTransit} unidades</p>
+            </div>
+            <div>
+              <p class="text-[10px] uppercase font-bold text-slate-500">Precio Referencial</p>
+              <p class="text-sm font-bold text-slate-800">$${product.priceUsd} USD</p>
+            </div>
+          </div>
+
+          <div>
+            <h4 class="text-xs font-bold uppercase tracking-wider text-avyra-blue mb-2">Características Técnicas</h4>
+            <ul class="space-y-1.5 text-xs text-slate-700">
+              ${product.features.map((f) => `<li class="flex items-start gap-2"><span class="text-avyra-burgundy font-bold">•</span><span>${f}</span></li>`).join('')}
+            </ul>
+          </div>
+
+          <div>
+            <h4 class="text-xs font-bold uppercase tracking-wider text-avyra-blue mb-2">Historial de Movimientos del Gemelo</h4>
+            <div class="space-y-2 max-h-40 overflow-y-auto pr-1">
+              ${product.movements
+                .slice()
+                .reverse()
+                .map(
+                  (m) => `
+                <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-xs flex items-center justify-between gap-2">
+                  <div>
+                    <p class="font-bold text-slate-800">${m.type} <span class="font-mono text-avyra-burgundy">(${m.delta})</span></p>
+                    <p class="text-[11px] text-slate-500">${m.location} · Ref: ${m.ref}</p>
+                  </div>
+                  <span class="text-[10px] text-slate-400 shrink-0">${m.date}</span>
+                </div>`
+                )
+                .join('')}
+            </div>
+          </div>
+        `;
+      }
+
+      Twin3DEngine.setProductModel(product.archetype, variant ? variant.hex : '#132C52');
+      Twin3DEngine.resize();
+    }
+
+    function renderTraceability() {
+      const orderSelect = document.getElementById('trace-order-select');
+      if (!orderSelect) return;
+
+      orderSelect.innerHTML = appState.orders
+        .map(
+          (o) =>
+            `<option value="${o.orderId}" ${o.orderId === appState.selectedOrderId ? 'selected' : ''}>${o.orderId} · ${o.productCode} (${TRACE_STAGES[o.stageIndex]})</option>`
+        )
+        .join('');
+
+      const order = appState.orders.find((o) => o.orderId === appState.selectedOrderId) || appState.orders[0];
+      if (!order) return;
+      appState.selectedOrderId = order.orderId;
+
+      document.getElementById('trace-current-order-badge').textContent = `${order.orderId} · ${TRACE_STAGES[order.stageIndex]}`;
+
+      // Stepper de las 6 etapas
+      const stepperEl = document.getElementById('trace-stepper');
+      if (stepperEl) {
+        stepperEl.innerHTML = TRACE_STAGES.map((stageLabel, idx) => {
+          const completed = idx < order.stageIndex;
+          const current = idx === order.stageIndex;
+          let cardStyle = 'bg-slate-50 border-slate-200 text-slate-500';
+          let pillStyle = 'bg-slate-200 text-slate-700';
+
+          if (current) {
+            cardStyle = 'bg-avyra-blue text-white border-avyra-blue shadow-md';
+            pillStyle = 'bg-avyra-burgundyLight text-white';
+          } else if (completed) {
+            cardStyle = 'bg-avyra-beige/70 text-avyra-blue border-avyra-beigeDark';
+            pillStyle = 'bg-emerald-700 text-white';
+          }
+
+          return `
+            <div class="rounded-xl border p-3 ${cardStyle} transition flex flex-col justify-between gap-2">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${pillStyle}">Etapa ${idx + 1}</span>
+                <span class="text-[10px] font-semibold">${current ? 'ACTUAL' : completed ? 'COMPLETADA' : 'PENDIENTE'}</span>
+              </div>
+              <p class="text-xs font-bold leading-snug">${stageLabel}</p>
+            </div>`;
+        }).join('');
+      }
+
+      // Resumen del pedido
+      const summaryEl = document.getElementById('trace-order-summary');
+      if (summaryEl) {
+        summaryEl.innerHTML = `
+          <h3 class="text-base font-bold text-avyra-blue border-b border-slate-100 pb-2">Ficha de Trazabilidad Comercial</h3>
+          <div class="space-y-2 text-xs sm:text-sm">
+            <div class="flex justify-between gap-2">
+              <span class="text-slate-500">Pedido Relacionado:</span>
+              <span class="font-mono font-bold text-avyra-blue">${order.orderId}</span>
+            </div>
+            <div class="flex justify-between gap-2">
+              <span class="text-slate-500">Ref. Interna CRM:</span>
+              <span class="font-mono font-semibold text-slate-800">${order.crmCustomerRef}</span>
+            </div>
+            <div class="flex justify-between gap-2">
+              <span class="text-slate-500">Producto / SKU:</span>
+              <span class="font-semibold text-slate-800 text-right">${order.productCode} – ${order.productName}</span>
+            </div>
+            <div class="flex justify-between gap-2">
+              <span class="text-slate-500">Unidades:</span>
+              <span class="font-bold text-slate-800">${order.units}</span>
+            </div>
+            <div class="flex justify-between gap-2">
+              <span class="text-slate-500">Estado Actual:</span>
+              <span class="font-bold text-avyra-burgundy">${TRACE_STAGES[order.stageIndex]}</span>
+            </div>
+            <div class="flex justify-between gap-2">
+              <span class="text-slate-500">Última Actualización:</span>
+              <span class="font-medium text-slate-700">${order.updatedAt}</span>
+            </div>
+            <div class="pt-2 border-t border-slate-100">
+              <p class="text-xs text-slate-500">Ubicación Registrada (Demo):</p>
+              <p class="text-xs font-semibold text-avyra-blue mt-0.5">${order.location}</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onclick="openProductIn3D('${order.productId}')"
+            class="w-full mt-2 py-2 px-3 rounded-xl bg-avyra-blue hover:bg-avyra-blueLight text-white text-xs font-semibold transition"
+          >
+            Inspeccionar Gemelo 3D Asociado
+          </button>
+        `;
+      }
+
+      // Historial cronológico
+      const historyEl = document.getElementById('trace-history-list');
+      if (historyEl) {
+        historyEl.innerHTML = order.history
+          .slice()
+          .reverse()
+          .map(
+            (h) => `
+          <div class="p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/70 space-y-1">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <span class="text-xs font-bold text-avyra-blue">${h.stage}</span>
+              <span class="text-[11px] font-mono text-slate-500">${h.date}</span>
+            </div>
+            <p class="text-xs text-slate-700">${h.note}</p>
+            <p class="text-[11px] text-slate-500">Ubicación registrada: <strong>${h.location}</strong></p>
+          </div>`
+          )
+          .join('');
+      }
+    }
+
+    function renderIntegrations() {
+      const product = getSelectedProduct();
+      const erpSelect = document.getElementById('erp-product-select');
+      if (erpSelect) {
+        erpSelect.innerHTML = appState.products
+          .map((p) => `<option value="${p.id}" ${p.id === product.id ? 'selected' : ''}>${p.code} – ${p.name} (Stock: ${p.stock})</option>`)
+          .join('');
+      }
+
+      // Tabla ERP
+      const erpTbody = document.getElementById('erp-stock-table-body');
+      if (erpTbody) {
+        erpTbody.innerHTML = appState.products
+          .map(
+            (p) => `
+          <tr>
+            <td class="py-2 pr-2 font-mono font-bold text-avyra-blue">${p.code}</td>
+            <td class="py-2 px-2 font-bold">${p.stock}</td>
+            <td class="py-2 px-2">${p.sold}</td>
+            <td class="py-2 pl-2"><span class="px-2 py-0.5 rounded-full text-[10px] font-semibold border ${getStatusBadgeClasses(p.status)}">${p.status}</span></td>
+          </tr>`
+          )
+          .join('');
+      }
+
+      // Tienda Virtual
+      const sfList = document.getElementById('storefront-sync-list');
+      if (sfList) {
+        sfList.innerHTML = appState.products
+          .map((p) => {
+            const availText = p.stock > 0 && p.storefrontAvailable ? `Disponible (${p.stock} uds)` : 'Agotado / No disponible';
+            return `
+              <div class="p-3 rounded-xl border border-slate-100 bg-slate-50/80 flex items-center justify-between gap-2">
+                <div>
+                  <p class="text-xs font-bold text-avyra-blue">${p.name} <span class="font-mono text-slate-400">(${p.code})</span></p>
+                  <p class="text-[11px] text-slate-500">Gemelo: <span class="font-mono">${p.twinId}</span> · ${p.variants.length} colores · $${p.priceUsd}</p>
+                </div>
+                <span class="text-[11px] font-semibold px-2.5 py-1 rounded-full ${
+                  p.stock > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-avyra-burgundy'
+                }">${availText}</span>
+              </div>`;
+          })
+          .join('');
+      }
+
+      // CRM con identificadores internos (sin exponer datos personales)
+      const crmList = document.getElementById('crm-orders-list');
+      if (crmList) {
+        crmList.innerHTML = appState.orders
+          .map(
+            (o) => `
+          <div class="p-3 rounded-xl border border-slate-100 bg-slate-50/80 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p class="text-xs font-bold text-avyra-blue">Pedido ${o.orderId} · Cliente Ref. Interna: <span class="font-mono text-avyra-burgundy">${o.crmCustomerRef}</span></p>
+              <p class="text-[11px] text-slate-500">${o.productCode} – ${o.productName} · Etapa: ${TRACE_STAGES[o.stageIndex]}</p>
+            </div>
+            <button
+              type="button"
+              onclick="openOrderInTraceability('${o.orderId}')"
+              class="text-xs font-semibold px-3 py-1 rounded-lg bg-white border border-slate-300 hover:bg-slate-100 text-avyra-blue"
+            >
+              Ver Recorrido
+            </button>
+          </div>`
+          )
+          .join('');
+      }
+
+      // JSON API / Base de Datos
+      const jsonPreview = document.getElementById('api-json-preview');
+      if (jsonPreview) {
+        const apiPayload = {
+          platform: 'AVYRA DIGITAL TWIN',
+          tagline: 'BEYOND EVERY JOURNEY',
+          dataMode: 'DEMO_SIMULATED_NO_LIVE_GPS',
+          timestamp: new Date().toISOString(),
+          selectedDigitalTwin: product
+        };
+        jsonPreview.textContent = JSON.stringify(apiPayload, null, 2);
+      }
+    }
+
+    function renderAnalytics() {
+      const lowStockProducts = appState.products.filter((p) => p.stock <= p.minStockAlert);
+      const topMover = appState.products.slice().sort((a, b) => b.sold - a.sold)[0];
+      const pendingDispatchCount = appState.orders.filter((o) => TRACE_STAGES[o.stageIndex] !== 'Entrega').length;
+      const discrepancyCount = appState.products.filter((p) => Number(p.stock) !== Number(p.reportedStock)).length;
+
+      const highlightsEl = document.getElementById('analytics-highlights');
+      if (highlightsEl) {
+        highlightsEl.innerHTML = `
+          <div class="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-card">
+            <p class="text-[11px] font-bold uppercase text-slate-500">Bajo Inventario</p>
+            <p class="text-xl font-extrabold text-avyra-burgundy mt-1">${lowStockProducts.length} producto(s)</p>
+            <p class="text-xs text-slate-600 mt-1">${lowStockProducts.map((p) => p.code).join(', ') || 'Ninguno'}</p>
+          </div>
+          <div class="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-card">
+            <p class="text-[11px] font-bold uppercase text-slate-500">Mayor Movimiento / Ventas</p>
+            <p class="text-xl font-extrabold text-avyra-blue mt-1">${topMover ? topMover.code : '-'}</p>
+            <p class="text-xs text-slate-600 mt-1">${topMover ? `${topMover.name} (${topMover.sold} uds)` : ''}</p>
+          </div>
+          <div class="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-card">
+            <p class="text-[11px] font-bold uppercase text-slate-500">Pedidos Activos / Despacho</p>
+            <p class="text-xl font-extrabold text-avyra-blue mt-1">${pendingDispatchCount} orden(es)</p>
+            <p class="text-xs text-slate-600 mt-1">Antes de etapa de Entrega</p>
+          </div>
+          <div class="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-card">
+            <p class="text-[11px] font-bold uppercase text-slate-500">Diferencias de Inventario</p>
+            <p class="text-xl font-extrabold text-avyra-burgundy mt-1">${discrepancyCount} SKU(s)</p>
+            <p class="text-xs text-slate-600 mt-1">Registrado vs. Reportado</p>
+          </div>
+        `;
+      }
+
+      // Tabla de reconciliación
+      const recBody = document.getElementById('reconciliation-table-body');
+      if (recBody) {
+        recBody.innerHTML = appState.products
+          .map((p) => {
+            const diff = Number(p.stock) - Number(p.reportedStock);
+            const isOk = diff === 0;
+            return `
+              <tr>
+                <td class="py-2.5 px-3 font-semibold text-avyra-blue">${p.code} – ${p.name}</td>
+                <td class="py-2.5 px-3 font-bold">${p.stock}</td>
+                <td class="py-2.5 px-3">${p.reportedStock}</td>
+                <td class="py-2.5 px-3 font-mono font-bold ${isOk ? 'text-emerald-700' : 'text-avyra-burgundy'}">${diff > 0 ? '+' + diff : diff}</td>
+                <td class="py-2.5 px-3 text-slate-600">${p.topVariantName}</td>
+                <td class="py-2.5 px-3">
+                  <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                    isOk ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-avyra-burgundy'
+                  }">${isOk ? 'Conciliado' : 'Diferencia Detectada'}</span>
+                </td>
+              </tr>`;
+          })
+          .join('');
+      }
+
+      // Lista filtrable de alertas
+      const alertsContainer = document.getElementById('analytics-alerts-container');
+      if (alertsContainer) {
+        const filtered = computeAlerts().filter((a) => appState.alertFilter === 'ALL' || a.category === appState.alertFilter);
+        if (!filtered.length) {
+          alertsContainer.innerHTML = `<p class="text-xs text-slate-500 py-4 text-center">No hay alertas para este filtro.</p>`;
+        } else {
+          alertsContainer.innerHTML = filtered
+            .map(
+              (a) => `
+            <div class="p-3.5 rounded-xl border border-slate-200 bg-slate-50/70 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p class="text-xs sm:text-sm font-bold text-avyra-blue">${a.title}</p>
+                <p class="text-xs text-slate-600 mt-0.5">${a.detail}</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button
+                  type="button"
+                  onclick="openProductIn3D('${a.productId}')"
+                  class="px-3 py-1.5 rounded-lg bg-avyra-blue text-white text-xs font-semibold hover:bg-avyra-blueLight"
+                >
+                  Ver Gemelo
+                </button>
+                <button
+                  type="button"
+                  onclick="acknowledgeAlert('${a.id}')"
+                  class="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+                >
+                  ${a.acknowledged ? 'Leída' : 'Marcar leída'}
+                </button>
+              </div>
+            </div>`
+            )
+            .join('');
+        }
+      }
+    }
+
+    function renderAll() {
+      updateAlertBadges();
+      renderDashboard();
+      renderCatalog();
+      renderViewer3D();
+      renderTraceability();
+      renderIntegrations();
+      renderAnalytics();
+    }
+
+    // =========================================================================
+    // INTERACCIONES GLOBALES Y NAVEGACIÓN
+    // =========================================================================
+    function switchTab(tabName) {
+      document.querySelectorAll('.app-section').forEach((sec) => sec.classList.add('hidden'));
+      const target = document.getElementById(`section-${tabName}`);
+      if (target) target.classList.remove('hidden');
+
+      document.querySelectorAll('.nav-tab').forEach((btn) => {
+        const active = btn.getAttribute('data-tab') === tabName;
+        btn.classList.toggle('bg-white', active);
+        btn.classList.toggle('text-avyra-blue', active);
+        btn.classList.toggle('shadow', active);
+        btn.classList.toggle('text-white/85', !active);
+        btn.classList.toggle('hover:bg-white/10', !active);
+      });
+
+      if (tabName === 'viewer3d') {
+        setTimeout(() => {
+          Twin3DEngine.resize();
+          renderViewer3D();
+        }, 50);
+      } else if (tabName === 'dashboard') {
+        renderCharts();
+      }
+    }
+
+    window.openProductIn3D = function (productId) {
+      appState.selectedProductId = productId;
+      saveState();
+      switchTab('viewer3d');
+      renderViewer3D();
+    };
+
+    window.selectProductVariant = function (productId, variantId, update3DOnly = false) {
+      appState.selectedVariantByProduct[productId] = variantId;
+      saveState();
+      const prod = appState.products.find((p) => p.id === productId);
+      const variant = prod?.variants.find((v) => v.id === variantId);
+      if (prod && variant && appState.selectedProductId === productId) {
+        Twin3DEngine.setVariantColor(variant.hex);
+      }
+      renderCatalog();
+      if (update3DOnly || document.getElementById('section-viewer3d')?.classList.contains('hidden') === false) {
+        renderViewer3D();
+      }
+    };
+
+    window.jumpToErpWithProduct = function (productId) {
+      appState.selectedProductId = productId;
+      saveState();
+      switchTab('integrations');
+      renderIntegrations();
+    };
+
+    window.openOrderInTraceability = function (orderId) {
+      appState.selectedOrderId = orderId;
+      saveState();
+      switchTab('traceability');
+      renderTraceability();
+    };
+
+    window.acknowledgeAlert = function (alertId) {
+      if (!appState.acknowledgedAlerts.includes(alertId)) {
+        appState.acknowledgedAlerts.push(alertId);
+        saveState();
+        renderAll();
+        showToast('Alerta marcada como revisada.', 'info');
+      }
+    };
+
+    function bindUIListeners() {
+      // Pestañas de navegación
+      document.querySelectorAll('.nav-tab').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const tab = btn.getAttribute('data-tab');
+          switchTab(tab);
+        });
+      });
+
+      // Botones rápidos del dashboard
+      document.getElementById('dash-go-3d')?.addEventListener('click', () => switchTab('viewer3d'));
+      document.getElementById('dash-go-erp')?.addEventListener('click', () => switchTab('integrations'));
+      document.getElementById('mobile-alert-jump')?.addEventListener('click', () => switchTab('analytics'));
+
+      document.getElementById('dash-ack-all-alerts')?.addEventListener('click', () => {
+        const allIds = computeAlerts().map((a) => a.id);
+        appState.acknowledgedAlerts = Array.from(new Set([...appState.acknowledgedAlerts, ...allIds]));
+        saveState();
+        renderAll();
+        showToast('Todas las alertas actuales marcadas como leídas.', 'success');
+      });
+
+      // Búsqueda global
+      const searchInput = document.getElementById('global-search-input');
+      searchInput?.addEventListener('input', (e) => {
+        appState.searchQuery = e.target.value || '';
+        renderCatalog();
+      });
+      document.getElementById('global-search-clear')?.addEventListener('click', () => {
+        if (searchInput) searchInput.value = '';
+        appState.searchQuery = '';
+        renderCatalog();
+      });
+
+      // Filtro de estado en catálogo
+      document.getElementById('catalog-filter-status')?.addEventListener('change', () => renderCatalog());
+
+      // Registro de nuevo gemelo digital
+      document.getElementById('btn-open-new-twin-modal')?.addEventListener('click', () => {
+        document.getElementById('new-twin-panel')?.classList.toggle('hidden');
+      });
+      document.getElementById('btn-close-new-twin-modal')?.addEventListener('click', () => {
+        document.getElementById('new-twin-panel')?.classList.add('hidden');
+      });
+
+      document.getElementById('form-new-twin')?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        const code = String(fd.get('code') || '').trim().toUpperCase();
+        const name = String(fd.get('name') || '').trim();
+        const archetype = String(fd.get('archetype') || 'pouch');
+        const stock = Math.max(0, Number(fd.get('stock') || 10));
+
+        if (!code || !name) return;
+
+        const newId = `prod-${Date.now()}`;
+        const varId = `var-${Date.now()}`;
+        const newProduct = {
+          id: newId,
+          code,
+          twinId: `DT-AVYRA-${Math.floor(100 + Math.random() * 899)}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
+          name,
+          category: 'Edición Registrada (Demo)',
+          archetype,
+          description: `Gemelo digital registrado en AVYRA DIGITAL TWIN para ${name} con seguimiento de inventario y trazabilidad.`,
+          features: [
+            'Representación 3D vinculada al catálogo AVYRA',
+            'Sincronización con inventario y movimientos demo',
+            'Identificador digital único trazable'
+          ],
+          status: stock <= 10 ? 'Stock Bajo' : 'Disponible',
+          stock,
+          reportedStock: stock,
+          sold: 0,
+          inTransit: 0,
+          minStockAlert: 10,
+          priceUsd: 79,
+          storefrontAvailable: true,
+          topVariantName: 'Azul Profundo',
+          variants: [
+            { id: varId, name: 'Azul Profundo', sku: `SKU-${code.replace(/[^A-Z0-9]/g, '')}-NVY`, hex: '#132C52', stock }
+          ],
+          movements: [
+            { date: new Date().toISOString().slice(0, 16).replace('T', ' '), type: 'Producto registrado', delta: `+${stock}`, location: 'AVYRA Twin Core (Demo)', ref: 'REG-NEW' }
+          ]
+        };
+
+        appState.products.push(newProduct);
+        appState.selectedVariantByProduct[newId] = varId;
+        appState.selectedProductId = newId;
+        saveState();
+        renderAll();
+        e.target.reset();
+        document.getElementById('new-twin-panel')?.classList.add('hidden');
+        showToast(`Gemelo digital ${code} – ${name} registrado.`, 'success');
+      });
+
+      // Controles del Visor 3D
+      document.getElementById('viewer-product-select')?.addEventListener('change', (e) => {
+        appState.selectedProductId = e.target.value;
+        saveState();
+        renderViewer3D();
+      });
+
+      document.getElementById('btn-zoom-in')?.addEventListener('click', () => Twin3DEngine.zoomBy(-0.8));
+      document.getElementById('btn-zoom-out')?.addEventListener('click', () => Twin3DEngine.zoomBy(0.8));
+      document.getElementById('btn-reset-camera')?.addEventListener('click', () => {
+        Twin3DEngine.resetView();
+        showToast('Vista 3D restablecida.', 'info');
+      });
+
+      const autoBtn = document.getElementById('btn-toggle-autorotate');
+      autoBtn?.addEventListener('click', () => {
+        const active = Twin3DEngine.toggleAutoRotate();
+        autoBtn.textContent = `Auto-rotación: ${active ? 'ON' : 'OFF'}`;
+      });
+
+      document.getElementById('viewer-btn-trace')?.addEventListener('click', () => switchTab('traceability'));
+      document.getElementById('viewer-btn-erp')?.addEventListener('click', () => {
+        jumpToErpWithProduct(getSelectedProduct().id);
+      });
+
+      // Trazabilidad: cambiar orden o avanzar etapa
+      document.getElementById('trace-order-select')?.addEventListener('change', (e) => {
+        appState.selectedOrderId = e.target.value;
+        saveState();
+        renderTraceability();
+      });
+
+      document.getElementById('btn-advance-stage')?.addEventListener('click', () => {
+        const order = appState.orders.find((o) => o.orderId === appState.selectedOrderId) || appState.orders[0];
+        if (!order) return;
+
+        if (order.stageIndex >= TRACE_STAGES.length - 1) {
+          showToast(`El pedido ${order.orderId} ya completó la etapa final: Entrega.`, 'info');
+          return;
+        }
+
+        order.stageIndex += 1;
+        const stageName = TRACE_STAGES[order.stageIndex];
+        const nowStr = new Date().toISOString().slice(0, 16).replace('T', ' ');
+        order.updatedAt = nowStr;
+        order.location = `${stageName} · Centro Operativo AVYRA (Registro Demo)`;
+        order.history.push({
+          stage: stageName,
+          date: nowStr,
+          location: order.location,
+          note: `Actualización de etapa registrada para pedido ${order.orderId} (sin rastreo GPS en vivo).`
+        });
+
+        // Reflejar también en el historial del gemelo digital asociado
+        const prod = appState.products.find((p) => p.id === order.productId);
+        if (prod) {
+          if (stageName === 'Despacho') {
+            prod.status = 'En Tránsito';
+            prod.inTransit += order.units;
+          } else if (stageName === 'Entrega') {
+            prod.inTransit = Math.max(0, prod.inTransit - order.units);
+            if (prod.stock > prod.minStockAlert) prod.status = 'Disponible';
+          }
+          prod.movements.push({
+            date: nowStr,
+            type: `Etapa: ${stageName}`,
+            delta: '0',
+            location: order.location,
+            ref: order.orderId
+          });
+        }
+
+        saveState();
+        renderAll();
+        showToast(`${order.orderId} avanzó a "${stageName}".`, 'success');
+      });
+
+      // Simulador ERP
+      document.getElementById('form-erp-movement')?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        const productId = String(fd.get('productId'));
+        const operation = String(fd.get('operation'));
+        const qty = Math.max(1, Number(fd.get('quantity') || 1));
+        const ref = String(fd.get('reference') || 'ERP-DEMO').trim();
+
+        const prod = appState.products.find((p) => p.id === productId);
+        if (!prod) return;
+
+        const nowStr = new Date().toISOString().slice(0, 16).replace('T', ' ');
+        let deltaLabel = `+${qty}`;
+        let opLabel = 'Entrada ERP';
+
+        if (operation === 'entrada') {
+          prod.stock += qty;
+          prod.reportedStock += qty;
+          appState.activitySeries.entradas[appState.activitySeries.entradas.length - 1] += qty;
+          opLabel = 'Entrada ERP';
+          deltaLabel = `+${qty}`;
+        } else if (operation === 'venta') {
+          const actualSold = Math.min(prod.stock, qty);
+          prod.stock = Math.max(0, prod.stock - qty);
+          prod.reportedStock = Math.max(0, prod.reportedStock - actualSold);
+          prod.sold += actualSold;
+          appState.activitySeries.salidas[appState.activitySeries.salidas.length - 1] += actualSold;
+          opLabel = 'Venta ERP';
+          deltaLabel = `-${actualSold}`;
+        } else if (operation === 'transito') {
+          const moved = Math.min(prod.stock, qty);
+          prod.stock = Math.max(0, prod.stock - moved);
+          prod.reportedStock = Math.max(0, prod.reportedStock - moved);
+          prod.inTransit += moved;
+          prod.status = 'En Tránsito';
+          appState.activitySeries.despachos[appState.activitySeries.despachos.length - 1] += moved;
+          opLabel = 'Despacho / Tránsito';
+          deltaLabel = `-${moved}`;
+        } else if (operation === 'ajuste_reporte') {
+          // Simula un reporte de conteo que puede diferir del stock registrado para demostrar reconciliación
+          prod.reportedStock = Math.max(0, prod.stock - (qty % 3 === 0 ? 2 : 0));
+          opLabel = 'Reporte Auditoría';
+          deltaLabel = 'AUD';
+        }
+
+        if (operation !== 'transito') {
+          prod.status = prod.stock <= prod.minStockAlert ? 'Stock Bajo' : 'Disponible';
+        }
+
+        prod.movements.push({
+          date: nowStr,
+          type: opLabel,
+          delta: deltaLabel,
+          location: ref,
+          ref
+        });
+
+        appState.selectedProductId = prod.id;
+        saveState();
+        renderAll();
+        showToast(`ERP actualizado para ${prod.code}: ${opLabel} (${deltaLabel}).`, 'success');
+      });
+
+      // Copiar JSON API
+      document.getElementById('btn-copy-json')?.addEventListener('click', () => {
+        const text = document.getElementById('api-json-preview')?.textContent || '';
+        const helper = document.createElement('textarea');
+        helper.value = text;
+        document.body.appendChild(helper);
+        helper.select();
+        try {
+          document.execCommand('copy');
+          showToast('Payload JSON copiado al portapapeles.', 'success');
+        } catch (err) {
+          showToast('No fue posible copiar automáticamente.', 'warning');
+        }
+        helper.remove();
+      });
+
+      // Conciliar diferencias en Análisis y Alertas
+      document.getElementById('btn-reconcile-all')?.addEventListener('click', () => {
+        appState.products.forEach((p) => {
+          p.reportedStock = p.stock;
+        });
+        saveState();
+        renderAll();
+        showToast('Inventario registrado y reportado conciliados en todos los productos.', 'success');
+      });
+
+      // Filtros de alertas en Análisis
+      document.querySelectorAll('.alert-filter-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          appState.alertFilter = btn.getAttribute('data-alert-filter') || 'ALL';
+          document.querySelectorAll('.alert-filter-btn').forEach((b) => {
+            const isSel = b === btn;
+            b.classList.toggle('bg-avyra-blue', isSel);
+            b.classList.toggle('text-white', isSel);
+            b.classList.toggle('bg-slate-100', !isSel);
+            b.classList.toggle('text-slate-700', !isSel);
+          });
+          renderAnalytics();
+        });
+      });
+
+      // Restablecer datos demo
+      document.getElementById('btn-reset-demo')?.addEventListener('click', () => {
+        appState = createInitialDemoState();
+        saveState();
+        renderAll();
+        showToast('Datos de demostración restablecidos a su estado inicial.', 'info');
+      });
+    }
+
+    // Inicialización al cargar la ventana
+    window.addEventListener('DOMContentLoaded', () => {
+      bindUIListeners();
+      switchTab('dashboard');
+      renderAll();
+      Twin3DEngine.init();
+    });
+  </script>
+</body>
+</html>
